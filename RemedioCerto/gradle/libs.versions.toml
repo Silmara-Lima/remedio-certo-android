@@ -36,6 +36,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version = "1.7.8" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
