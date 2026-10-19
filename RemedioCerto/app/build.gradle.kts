@@ -62,4 +62,5 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.play.services.code.scanner)
 }

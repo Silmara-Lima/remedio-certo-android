@@ -50,3 +50,19 @@ data class EstoqueDto(
     val medicamento: MedicamentoDto? = null,
     val unidade: UnidadeDto? = null,
 )
+
+@Serializable
+data class MovimentacaoRequest(
+    val tipo: String,                                   // entrada | saida | descarte | ajuste
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    val lote: String,
+    val validade: String,                               // "2026-12-15"
+    val quantidade: Int,
+    @SerialName("estoque_lote_id") val estoqueLoteId: Int? = null,
+    @SerialName("numero_documento") val numeroDocumento: String? = null,
+    val observacao: String? = null,
+)
+
+@Serializable
+data class MovimentacaoDto(val id: Int, val tipo: String, val lote: String, val quantidade: Int)

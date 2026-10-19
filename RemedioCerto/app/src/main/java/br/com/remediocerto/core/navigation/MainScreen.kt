@@ -20,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.feature.estoque.EstoqueScreen
+import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -58,7 +59,7 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
         NavHost(nav, startDestination = Aba.INICIO.rota, modifier = Modifier.padding(padding)) {
             composable(Aba.INICIO.rota) { TelaProvisoria("Início", "Olá, ${usuario.nome}!") }
             composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
-            composable(Aba.ESCANEAR.rota) { TelaProvisoria("Escanear") }
+            composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
             composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
             composable(Aba.MAIS.rota) { MaisScreen(usuario, onSair) }
         }
