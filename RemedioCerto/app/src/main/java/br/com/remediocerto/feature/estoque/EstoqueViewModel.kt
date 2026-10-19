@@ -34,8 +34,6 @@ class EstoqueViewModel : ViewModel() {
     var busca by mutableStateOf("")
     var filtro by mutableStateOf<StatusEstoque?>(null)
 
-    init { carregar() }
-
     fun carregar(puxouParaAtualizar: Boolean = false) = viewModelScope.launch {
         if (puxouParaAtualizar) atualizando = true else estado = EstoqueUiState.Carregando
         estado = try {

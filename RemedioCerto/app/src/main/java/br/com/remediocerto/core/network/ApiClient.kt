@@ -19,6 +19,11 @@ interface RemedioCertoApi {
     @GET("medicamentos") suspend fun buscarMedicamentos(@Query("busca") busca: String? = null): List<MedicamentoDto>
     @GET("unidades") suspend fun listarUnidades(): List<UnidadeDto>
     @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
+    @GET("dashboard") suspend fun dashboard(): DashboardDto
+    @GET("movimentacoes") suspend fun listarMovimentacoes(
+        @Query("tipo") tipo: String? = null,
+        @Query("limite") limite: Int = 100,
+    ): List<HistoricoDto>
 }
 
 object ApiClient {

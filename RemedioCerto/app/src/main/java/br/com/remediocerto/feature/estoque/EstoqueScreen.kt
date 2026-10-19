@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
+    LaunchedEffect(Unit) { vm.carregar(puxouParaAtualizar = vm.estado is EstoqueUiState.Sucesso) }
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = vm.busca,

@@ -66,3 +66,44 @@ data class MovimentacaoRequest(
 
 @Serializable
 data class MovimentacaoDto(val id: Int, val tipo: String, val lote: String, val quantidade: Int)
+
+@Serializable
+data class MovRecenteDto(
+    val id: Int,
+    val tipo: String,                 // "ENTRADA", "SAIDA"...
+    val medicamento: String? = null,
+    val unidade: String? = null,
+    val lote: String? = null,
+    val quantidade: Int = 0,
+    val responsavel: String? = null,
+    val data: String? = null,
+)
+
+@Serializable
+data class DashboardDto(
+    val alertasAtivos: Int = 0,
+    val estoqueCritico: Int = 0,
+    val lotesVencimentoProximo: Int = 0,
+    val movimentacoesHoje: Int = 0,
+    val totalMedicamentos: Int = 0,
+    val totalLotes: Int = 0,
+    val movimentacoesRecentes: List<MovRecenteDto> = emptyList(),
+)
+
+@Serializable
+data class UsuarioResumoDto(val id: Int, val nome: String)
+
+@Serializable
+data class HistoricoDto(
+    val id: Int,
+    val tipo: String,                 // "entrada", "saida"...
+    val lote: String,
+    val validade: String,
+    val quantidade: Int,
+    @SerialName("numero_documento") val numeroDocumento: String? = null,
+    val observacao: String? = null,
+    @SerialName("criada_em") val criadaEm: String,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+    val usuario: UsuarioResumoDto? = null,
+)

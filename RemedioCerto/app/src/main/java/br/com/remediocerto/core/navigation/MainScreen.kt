@@ -21,6 +21,8 @@ import androidx.navigation.compose.rememberNavController
 import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.feature.estoque.EstoqueScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
+import br.com.remediocerto.feature.dashboard.DashboardScreen
+import br.com.remediocerto.feature.historico.HistoricoScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -57,11 +59,24 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
         }
     ) { padding ->
         NavHost(nav, startDestination = Aba.INICIO.rota, modifier = Modifier.padding(padding)) {
-            composable(Aba.INICIO.rota) { TelaProvisoria("Início", "Olá, ${usuario.nome}!") }
+            composable(Aba.INICIO.rota) {
+                DashboardScreen(
+                    usuario = usuario,
+                    onVerHistorico = { nav.navigate("historico") },
+                    onNovaMovimentacao = {
+                        nav.navigate(Aba.ESCANEAR.rota) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+            composable("historico") { HistoricoScreen(onVoltar = { nav.popBackStack() }) }
             composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
             composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
             composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
-            composable(Aba.MAIS.rota) { MaisScreen(usuario, onSair) }
+            composable(Aba.MAIS.rota) { MaisScreen(usuario, onSair, onHistorico = { nav.navigate("historico") }) }
         }
     }
 }
@@ -76,7 +91,7 @@ fun TelaProvisoria(titulo: String, subtitulo: String = "Em construção") {
 }
 
 @Composable
-fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit) {
+fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit, onHistorico: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         Text(usuario.nome, style = MaterialTheme.typography.headlineSmall)
         Text(usuario.email)
@@ -86,6 +101,8 @@ fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit) {
             Text("Medicamentos · Unidades · Usuários · Relatórios (em breve)")
             Spacer(Modifier.height(24.dp))
         }
+        OutlinedButton(onClick = onHistorico, modifier = Modifier.fillMaxWidth()) { Text("Histórico de movimentações") }
+        Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onSair) { Text("Sair") }
     }
 }
