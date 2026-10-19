@@ -9,11 +9,16 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface RemedioCertoApi {
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
     @GET("estoque") suspend fun listarEstoque(): List<EstoqueDto>
+    @GET("estoque") suspend fun listarEstoque(@Query("medicamento_id") medicamentoId: Int? = null): List<EstoqueDto>
+    @GET("medicamentos") suspend fun buscarMedicamentos(@Query("busca") busca: String? = null): List<MedicamentoDto>
+    @GET("unidades") suspend fun listarUnidades(): List<UnidadeDto>
+    @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
 }
 
 object ApiClient {
