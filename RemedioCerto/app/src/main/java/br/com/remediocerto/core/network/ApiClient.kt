@@ -13,6 +13,7 @@ import retrofit2.http.POST
 interface RemedioCertoApi {
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
+    @GET("estoque") suspend fun listarEstoque(): List<EstoqueDto>
 }
 
 object ApiClient {
