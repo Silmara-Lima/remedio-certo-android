@@ -10,13 +10,24 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.DELETE
+import retrofit2.http.PUT
+import retrofit2.http.Path
 
 interface RemedioCertoApi {
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
     @GET("estoque") suspend fun listarEstoque(): List<EstoqueDto>
     @GET("estoque") suspend fun listarEstoque(@Query("medicamento_id") medicamentoId: Int? = null): List<EstoqueDto>
-    @GET("medicamentos") suspend fun buscarMedicamentos(@Query("busca") busca: String? = null): List<MedicamentoDto>
+    @GET("medicamentos") suspend fun buscarMedicamentos(
+        @Query("busca") busca: String? = null,
+        @Query("somente_ativos") somenteAtivos: Boolean = true,
+    ): List<MedicamentoDto>
+    @GET("medicamentos/{id}") suspend fun buscarMedicamento(@Path("id") id: Int): MedicamentoDto
+    @POST("medicamentos") suspend fun criarMedicamento(@Body body: MedicamentoRequest): MedicamentoDto
+    @PUT("medicamentos/{id}") suspend fun atualizarMedicamento(@Path("id") id: Int, @Body body: MedicamentoRequest): MedicamentoDto
+    @DELETE("medicamentos/{id}") suspend fun desativarMedicamento(@Path("id") id: Int): MensagemDto
+
     @GET("unidades") suspend fun listarUnidades(): List<UnidadeDto>
     @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
 }

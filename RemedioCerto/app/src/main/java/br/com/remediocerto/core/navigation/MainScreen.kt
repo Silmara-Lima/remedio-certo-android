@@ -21,6 +21,10 @@ import androidx.navigation.compose.rememberNavController
 import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.feature.estoque.EstoqueScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
+import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentosScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -61,7 +65,26 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
             composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
             composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
             composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
-            composable(Aba.MAIS.rota) { MaisScreen(usuario, onSair) }
+            composable(Aba.MAIS.rota) {
+                MaisScreen(
+                    usuario, onSair,
+                    onHistorico = { nav.navigate("historico") },
+                    onMedicamentos = { nav.navigate("medicamentos") },
+                )
+            }
+            composable("medicamentos") {
+                MedicamentosScreen(
+                    onVoltar = { nav.popBackStack() },
+                    onNovo = { nav.navigate("medicamento-novo") },
+                    onEditar = { id -> nav.navigate("medicamento/$id") },
+                )
+            }
+            composable("medicamento-novo") {
+                MedicamentoFormScreen(id = null, onConcluido = { nav.popBackStack() })
+            }
+            composable("medicamento/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { entrada ->
+                MedicamentoFormScreen(id = entrada.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+            }
         }
     }
 }
@@ -76,16 +99,25 @@ fun TelaProvisoria(titulo: String, subtitulo: String = "Em construção") {
 }
 
 @Composable
-fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
+fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit, onHistorico: () -> Unit, onMedicamentos: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(usuario.nome, style = MaterialTheme.typography.headlineSmall)
         Text(usuario.email)
         Text("Perfil: ${usuario.tipo}")
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(onClick = onHistorico, modifier = Modifier.fillMaxWidth()) { Text("Histórico de movimentações") }
+
         if (usuario.tipo == "ADMIN") {
-            Text("Medicamentos · Unidades · Usuários · Relatórios (em breve)")
-            Spacer(Modifier.height(24.dp))
+            Text("Cadastros", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            OutlinedButton(onClick = onMedicamentos, modifier = Modifier.fillMaxWidth()) { Text("Medicamentos") }
+            // Unidades e Usuários entram aqui nos próximos passos
         }
+
+        Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onSair) { Text("Sair") }
     }
 }
