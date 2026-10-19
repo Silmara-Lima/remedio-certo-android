@@ -17,6 +17,7 @@ import br.com.remediocerto.core.network.UsuarioDto
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import androidx.compose.ui.text.font.FontWeight
 
 class LoginViewModel(app: Application) : AndroidViewModel(app) {
     var carregando by mutableStateOf(false); private set
@@ -47,7 +48,16 @@ fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, vm: LoginViewModel = viewModel(
     LaunchedEffect(vm.usuarioLogado) { vm.usuarioLogado?.let(onLoginOk) }
 
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("Remédio Certo", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Remédio Certo",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            "Controle de estoque de medicamentos",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(24.dp))
         OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))

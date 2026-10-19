@@ -8,6 +8,10 @@ import br.com.remediocerto.core.navigation.AppNavigation
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.ui.theme.RemedioCertoTheme
 import kotlinx.coroutines.runBlocking
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +22,12 @@ class MainActivity : ComponentActivity() {
         ApiClient.token = sessaoSalva?.first
         setContent {
             RemedioCertoTheme {
-                AppNavigation(usuarioInicial = sessaoSalva?.second)
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    AppNavigation(usuarioInicial = sessaoSalva?.second)
+                }
             }
         }
     }
