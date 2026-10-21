@@ -8,6 +8,12 @@ import kotlinx.serialization.Serializable
 data class LoginRequest(val email: String, val senha: String)
 
 @Serializable
+data class TrocarSenhaRequest(
+    @SerialName("senha_atual") val senhaAtual: String,
+    @SerialName("nova_senha") val novaSenha: String,
+)
+
+@Serializable
 data class UsuarioDto(
     val id: Int,
     val nome: String,

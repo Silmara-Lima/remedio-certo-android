@@ -2,9 +2,14 @@ package br.com.remediocerto.feature.auth
 
 import android.app.Application
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
@@ -17,7 +22,6 @@ import br.com.remediocerto.core.network.UsuarioDto
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
-import androidx.compose.ui.text.font.FontWeight
 
 class LoginViewModel(app: Application) : AndroidViewModel(app) {
     var carregando by mutableStateOf(false); private set
@@ -32,22 +36,29 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             getApplication<RemedioCertoApp>().sessao.salvar(r.accessToken, r.usuario)
             usuarioLogado = r.usuario
         } catch (e: HttpException) {
-            erro = if (e.code() == 401) "E-mail ou senha inválidos." else "Erro ${e.code()} na API."
+            erro = when (e.code()) {
+                401 -> "E-mail ou senha inválidos."
+                422 -> "Verifique o formato do e-mail e preencha a senha."
+                else -> "Erro ${e.code()} na API."
+            }
         } catch (e: IOException) {
-            erro = "Não foi possível conectar à API: ${e.message}"
+            erro = "Não foi possível conectar à API."
         }
         carregando = false
     }
 }
 
 @Composable
-fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, vm: LoginViewModel = viewModel()) {
+fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, aviso: String? = null, vm: LoginViewModel = viewModel()) {
     var email by remember { mutableStateOf("admin@remediocerto.com") }
     var senha by remember { mutableStateOf("") }
 
     LaunchedEffect(vm.usuarioLogado) { vm.usuarioLogado?.let(onLoginOk) }
 
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+    Column(
+        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
         Text(
             "Remédio Certo",
             style = MaterialTheme.typography.headlineLarge,
@@ -58,13 +69,43 @@ fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, vm: LoginViewModel = viewModel(
             "Controle de estoque de medicamentos",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // Aviso vindo de fora (ex.: sessão expirada)
+        if (aviso != null) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(aviso, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
-        OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("E-mail") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false),
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(senha, { senha = it }, label = { Text("Senha") },
-            visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = senha,
+            onValueChange = { senha = it },
+            label = { Text("Senha") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(20.dp))
-        Button(onClick = { vm.entrar(email, senha) }, enabled = !vm.carregando, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = { vm.entrar(email, senha) },
+            enabled = !vm.carregando,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) {
             Text(if (vm.carregando) "Entrando..." else "Entrar")
         }
         vm.erro?.let {

@@ -31,6 +31,7 @@ import br.com.remediocerto.feature.historico.HistoricoScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
+import br.com.remediocerto.feature.perfil.TrocarSenhaScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -89,11 +90,13 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
                     onMedicamentos = { nav.navigate("medicamentos") },
                     onUnidades = { nav.navigate("unidades") },
                     onUsuarios = { nav.navigate("usuarios") },
+                    onTrocarSenha = { nav.navigate("trocar-senha") },
                 )
             }
 
             // ---------- Histórico ----------
             composable("historico") { HistoricoScreen(onVoltar = { nav.popBackStack() }) }
+            composable("trocar-senha") { TrocarSenhaScreen(onVoltar = { nav.popBackStack() }) }
 
             // ---------- Cadastro de medicamentos ----------
             composable("medicamentos") {
@@ -160,6 +163,7 @@ fun MaisScreen(
     onMedicamentos: () -> Unit,
     onUnidades: () -> Unit,
     onUsuarios: () -> Unit,
+    onTrocarSenha: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -171,6 +175,7 @@ fun MaisScreen(
         Spacer(Modifier.height(12.dp))
 
         OutlinedButton(onClick = onHistorico, modifier = Modifier.fillMaxWidth()) { Text("Histórico de movimentações") }
+        OutlinedButton(onClick = onTrocarSenha, modifier = Modifier.fillMaxWidth()) { Text("Trocar senha") }
 
         if (usuario.tipo == "ADMIN") {
             Text("Cadastros", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
