@@ -13,11 +13,14 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 interface RemedioCertoApi {
     // ---------- Autenticação ----------
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
+    @PUT("auth/trocar-senha") suspend fun trocarSenha(@Body body: TrocarSenhaRequest): MensagemDto
 
     // ---------- Dashboard ----------
     @GET("dashboard") suspend fun dashboard(): DashboardDto
@@ -65,13 +68,24 @@ object ApiClient {
 
     var token: String? = null
 
+    // Vira true quando a API responde 401 numa chamada autenticada (token vencido ou inválido).
+    private val _sessaoExpirada = MutableStateFlow(false)
+    val sessaoExpirada: StateFlow<Boolean> = _sessaoExpirada
+    fun reiniciarAvisoSessao() { _sessaoExpirada.value = false }
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val http = OkHttpClient.Builder()
         .addInterceptor { chain ->
+            val tokenAtual = token
             val req = chain.request().newBuilder()
-            token?.let { req.header("Authorization", "Bearer $it") }
-            chain.proceed(req.build())
+            tokenAtual?.let { req.header("Authorization", "Bearer $it") }
+            val resposta = chain.proceed(req.build())
+            val ehLogin = chain.request().url.encodedPath.endsWith("/auth/login")
+            if (resposta.code == 401 && tokenAtual != null && !ehLogin) {
+                _sessaoExpirada.value = true
+            }
+            resposta
         }
         .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
         .build()

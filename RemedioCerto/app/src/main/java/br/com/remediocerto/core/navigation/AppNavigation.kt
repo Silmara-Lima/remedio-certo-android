@@ -21,25 +21,40 @@ fun AppNavigation(usuarioInicial: UsuarioDto?) {
     val app = LocalContext.current.applicationContext as RemedioCertoApp
     val scope = rememberCoroutineScope()
     var usuario by remember { mutableStateOf(usuarioInicial) }
+    var avisoLogin by remember { mutableStateOf<String?>(null) }
+
+    fun encerrarSessao(aviso: String?) {
+        scope.launch { app.sessao.limpar() }
+        ApiClient.token = null
+        usuario = null
+        avisoLogin = aviso
+        nav.navigate("login") { popUpTo(0) { inclusive = true } }   // limpa toda a pilha de telas
+    }
+
+    // Token vencido em qualquer tela -> volta ao login automaticamente
+    val sessaoExpirada by ApiClient.sessaoExpirada.collectAsState()
+    LaunchedEffect(sessaoExpirada) {
+        if (sessaoExpirada && usuario != null) {
+            encerrarSessao("Sua sessão expirou. Entre novamente.")
+        }
+        ApiClient.reiniciarAvisoSessao()
+    }
 
     NavHost(nav, startDestination = if (usuarioInicial != null) "principal" else "login") {
         composable("login") {
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
-                LoginScreen(onLoginOk = { u ->
-                    usuario = u
-                    nav.navigate("principal") { popUpTo("login") { inclusive = true } }
-                })
+                LoginScreen(
+                    aviso = avisoLogin,
+                    onLoginOk = { u ->
+                        usuario = u
+                        avisoLogin = null
+                        nav.navigate("principal") { popUpTo("login") { inclusive = true } }
+                    },
+                )
             }
         }
         composable("principal") {
-            usuario?.let { u ->
-                MainScreen(usuario = u, onSair = {
-                    scope.launch { app.sessao.limpar() }
-                    ApiClient.token = null
-                    usuario = null
-                    nav.navigate("login") { popUpTo("principal") { inclusive = true } }
-                })
-            }
+            usuario?.let { u -> MainScreen(usuario = u, onSair = { encerrarSessao(null) }) }
         }
     }
 }
