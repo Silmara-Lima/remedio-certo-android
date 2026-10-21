@@ -6,14 +6,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.remediocerto.core.network.*
+import br.com.remediocerto.core.ui.dataDigitosParaIso
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.ResolverStyle
 
 enum class TipoMov(val api: String, val rotulo: String) {
     SAIDA("saida", "Saída"),
@@ -57,21 +56,16 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     fun onBuscaChange(texto: String) {
         busca = texto
         buscaJob?.cancel()
-        if (texto.trim().length < 2) {
-            sugestoes = emptyList(); return
-        }
+        if (texto.trim().length < 2) { sugestoes = emptyList(); return }
         buscaJob = viewModelScope.launch {
-            delay(300)                                  // espera o usuário parar de digitar
-            sugestoes = runCatching { ApiClient.api.buscarMedicamentos(texto.trim()) }.getOrDefault(
-                emptyList()
-            )
+            delay(300)
+            sugestoes = runCatching { ApiClient.api.buscarMedicamentos(texto.trim()) }.getOrDefault(emptyList())
         }
     }
 
     fun processarCodigo(codigo: String) = viewModelScope.launch {
         erro = null
-        val achados =
-            runCatching { ApiClient.api.buscarMedicamentos(codigo) }.getOrDefault(emptyList())
+        val achados = runCatching { ApiClient.api.buscarMedicamentos(codigo) }.getOrDefault(emptyList())
         val m = achados.firstOrNull { it.codigoBarras == codigo } ?: achados.firstOrNull()
         if (m != null) selecionarMedicamento(m)
         else erro = "Nenhum medicamento cadastrado com o código $codigo."
@@ -87,23 +81,11 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     }
 
     // ---------- tipo, unidade e lote ----------
-    fun selecionarTipo(t: TipoMov) {
-        tipo = t; mensagem = null; erro = null; ajustarLote()
-    }
+    fun selecionarTipo(t: TipoMov) { tipo = t; mensagem = null; erro = null; ajustarLote() }
 
-    fun selecionarUnidade(id: Int) {
-        unidadeId = id; ajustarLote()
-    }
+    fun selecionarUnidade(id: Int) { unidadeId = id; ajustarLote() }
 
-    fun lotesDisponiveis(): List<EstoqueDto> = lotes
-        .filter { it.unidadeId == unidadeId }
-        .filter {
-            when (tipo) {
-                TipoMov.SAIDA -> it.quantidade > 0 && it.status != "vencido"   // RN03
-                TipoMov.DESCARTE -> it.quantidade > 0
-                else -> true
-            }
-        }
+    fun lotesDisponiveis(): List<EstoqueDto> = lotesDisponiveisPara(tipo, lotes, unidadeId)
 
     private fun ajustarLote() {
         val disponiveis = lotesDisponiveis()
@@ -114,7 +96,6 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
         val m = medicamento ?: return
         viewModelScope.launch {
             lotes = runCatching { ApiClient.api.listarEstoque(m.id) }.getOrDefault(emptyList())
-                .sortedBy { it.validade }
             ajustarLote()
         }
     }
@@ -125,57 +106,32 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
         val m = medicamento
         val unidade = unidadeId
         val qtd = quantidade.trim().toIntOrNull()
-        if (m == null) {
-            erro = "Selecione o medicamento."; return
-        }
-        if (unidade == null) {
-            erro = "Selecione a unidade."; return
-        }
-        if (qtd == null || qtd < 0 || (qtd == 0 && tipo != TipoMov.AJUSTE)) {
-            erro = "Informe uma quantidade válida."; return
-        }
+        if (m == null) { erro = "Selecione o medicamento."; return }
+        if (unidade == null) { erro = "Selecione a unidade."; return }
+        if (qtd == null || qtd < 0 || (qtd == 0 && tipo != TipoMov.AJUSTE)) { erro = "Informe uma quantidade válida."; return }
 
         val req = if (tipo == TipoMov.ENTRADA) {
-            val validadeIso = paraIso(validade)
-            if (novoLote.isBlank()) {
-                erro = "Informe o número do lote."; return
-            }
-            if (validadeIso == null) {
-                erro = "Informe uma validade válida (dd/mm/aaaa)."; return
-            }
+            val validadeIso = dataDigitosParaIso(validade)
+            if (novoLote.isBlank()) { erro = "Informe o número do lote."; return }
+            if (validadeIso == null) { erro = "Informe uma validade válida (dd/mm/aaaa)."; return }
             if (LocalDate.parse(validadeIso).isBefore(LocalDate.now())) {
                 erro = "A validade não pode ser uma data passada."; return
             }
             MovimentacaoRequest(
-                tipo.api,
-                m.id,
-                unidade,
-                novoLote.trim(),
-                validadeIso,
-                qtd,
+                tipo.api, m.id, unidade, novoLote.trim(), validadeIso, qtd,
                 numeroDocumento = documento.ifBlank { null },
-                observacao = observacao.ifBlank { null })
+                observacao = observacao.ifBlank { null },
+            )
         } else {
             val lote = loteSelecionado
-            if (lote == null) {
-                erro = "Selecione o lote."; return
-            }
-            if (tipo != TipoMov.AJUSTE && qtd > lote.quantidade) {                 // RN01
-                erro = "Saldo insuficiente: o lote ${lote.lote} tem ${lote.quantidade} un."; return
-            }
-            if (tipo == TipoMov.AJUSTE && observacao.isBlank()) {                 // RN06
-                erro = "Informe a justificativa do ajuste no campo Observação."; return
-            }
+            if (lote == null) { erro = "Selecione o lote."; return }
+            validarMovimentacaoEmLote(tipo, qtd, lote, observacao)?.let { erro = it; return }
             MovimentacaoRequest(
-                tipo.api,
-                m.id,
-                unidade,
-                lote.lote,
-                lote.validade,
-                qtd,
+                tipo.api, m.id, unidade, lote.lote, lote.validade, qtd,
                 estoqueLoteId = lote.id,
                 numeroDocumento = documento.ifBlank { null },
-                observacao = observacao.ifBlank { null })
+                observacao = observacao.ifBlank { null },
+            )
         }
 
         viewModelScope.launch {
@@ -184,7 +140,7 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
                 ApiClient.api.registrarMovimentacao(req)
                 mensagem = "${tipo.rotulo} de $qtd un. de ${m.nome} registrada com sucesso."
                 quantidade = ""; documento = ""; observacao = ""; novoLote = ""; validade = ""
-                carregarLotes()                                  // atualiza os saldos dos lotes
+                carregarLotes()
             } catch (e: HttpException) {
                 erro = mensagemDeErro(e)
             } catch (e: IOException) {
@@ -193,11 +149,4 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
             enviando = false
         }
     }
-
-    private fun paraIso(digitos: String): String? = runCatching {
-        LocalDate.parse(
-            digitos,
-            DateTimeFormatter.ofPattern("ddMMuuuu").withResolverStyle(ResolverStyle.STRICT),
-        ).toString()
-    }.getOrNull()
 }
