@@ -25,6 +25,13 @@ interface RemedioCertoApi {
     // ---------- Estoque ----------
     @GET("estoque") suspend fun listarEstoque(@Query("medicamento_id") medicamentoId: Int? = null): List<EstoqueDto>
 
+    // ---------- Usuários ----------
+    @GET("usuarios") suspend fun listarUsuarios(@Query("somente_ativos") somenteAtivos: Boolean = true): List<UsuarioAdminDto>
+    @GET("usuarios/{id}") suspend fun buscarUsuario(@Path("id") id: Int): UsuarioAdminDto
+    @POST("usuarios") suspend fun criarUsuario(@Body body: UsuarioRequest): UsuarioAdminDto
+    @PUT("usuarios/{id}") suspend fun atualizarUsuario(@Path("id") id: Int, @Body body: UsuarioRequest): UsuarioAdminDto
+    @DELETE("usuarios/{id}") suspend fun desativarUsuario(@Path("id") id: Int): MensagemDto
+
     // ---------- Movimentações ----------
     @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
     @GET("movimentacoes") suspend fun listarMovimentacoes(
