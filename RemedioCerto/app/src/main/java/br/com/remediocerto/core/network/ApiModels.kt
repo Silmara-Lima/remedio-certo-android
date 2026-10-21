@@ -28,6 +28,27 @@ data class TokenResponse(
 data class UsuarioResumoDto(val id: Int, val nome: String)
 
 @Serializable
+data class UsuarioAdminDto(
+    val id: Int,
+    val nome: String,
+    val email: String,
+    val perfil: String,                                  // "admin" | "funcionario"
+    val ativo: Boolean = true,
+    @SerialName("unidade_id") val unidadeId: Int? = null,
+    @SerialName("ultimo_acesso") val ultimoAcesso: String? = null,
+)
+
+@Serializable
+data class UsuarioRequest(
+    val nome: String,
+    val email: String,
+    val perfil: String,
+    val ativo: Boolean,
+    @SerialName("unidade_id") val unidadeId: Int?,
+    val senha: String?,                                  // na edição, null = manter a senha atual
+)
+
+@Serializable
 data class MensagemDto(val mensagem: String)
 
 // ---------- Unidades ----------

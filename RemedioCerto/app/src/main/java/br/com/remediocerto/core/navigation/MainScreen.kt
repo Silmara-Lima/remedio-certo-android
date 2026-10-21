@@ -29,6 +29,8 @@ import br.com.remediocerto.feature.dashboard.DashboardScreen
 import br.com.remediocerto.feature.estoque.EstoqueScreen
 import br.com.remediocerto.feature.historico.HistoricoScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
+import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
+import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -86,6 +88,7 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
                     onHistorico = { nav.navigate("historico") },
                     onMedicamentos = { nav.navigate("medicamentos") },
                     onUnidades = { nav.navigate("unidades") },
+                    onUsuarios = { nav.navigate("usuarios") },
                 )
             }
 
@@ -105,6 +108,21 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
             }
             composable("medicamento/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
                 MedicamentoFormScreen(id = e.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+            }
+
+            // ---------- Cadastro de usuários ----------
+            composable("usuarios") {
+                UsuariosScreen(
+                    onVoltar = { nav.popBackStack() },
+                    onNovo = { nav.navigate("usuario-novo") },
+                    onEditar = { id -> nav.navigate("usuario/$id") },
+                )
+            }
+            composable("usuario-novo") {
+                UsuarioFormScreen(id = null, usuarioLogadoId = usuario.id, onConcluido = { nav.popBackStack() })
+            }
+            composable("usuario/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+                UsuarioFormScreen(id = e.arguments?.getInt("id"), usuarioLogadoId = usuario.id, onConcluido = { nav.popBackStack() })
             }
 
             // ---------- Cadastro de unidades ----------
@@ -141,6 +159,7 @@ fun MaisScreen(
     onHistorico: () -> Unit,
     onMedicamentos: () -> Unit,
     onUnidades: () -> Unit,
+    onUsuarios: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -157,7 +176,7 @@ fun MaisScreen(
             Text("Cadastros", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             OutlinedButton(onClick = onMedicamentos, modifier = Modifier.fillMaxWidth()) { Text("Medicamentos") }
             OutlinedButton(onClick = onUnidades, modifier = Modifier.fillMaxWidth()) { Text("Unidades de saúde") }
-            // Usuários entra aqui no próximo passo
+            OutlinedButton(onClick = onUsuarios, modifier = Modifier.fillMaxWidth()) { Text("Usuários") }
         }
 
         Spacer(Modifier.height(12.dp))
