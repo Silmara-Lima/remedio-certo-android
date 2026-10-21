@@ -18,12 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.remediocerto.core.ui.StatusBadge
 import br.com.remediocerto.core.ui.StatusEstoque
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import br.com.remediocerto.core.ui.dataBr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
+    // Carrega ao abrir a aba. Na 1ª vez mostra o indicador central;
+    // nas próximas, atualiza sem piscar (para refletir movimentações novas).
+    LaunchedEffect(Unit) { vm.carregar(puxouParaAtualizar = vm.estado is EstoqueUiState.Sucesso) }
+
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = vm.busca,
@@ -103,7 +106,7 @@ private fun ItemEstoqueCard(item: ItemEstoque) {
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Text("Lote ${lote.lote}", Modifier.weight(1f))
                             Text("${lote.quantidade} un.", Modifier.padding(horizontal = 12.dp))
-                            Text("Val. ${formatarData(lote.validade)}", color = situacao.cor)
+                            Text("Val. ${dataBr(lote.validade)}", color = situacao.cor)
                         }
                     }
                 }
@@ -126,6 +129,3 @@ private fun MensagemCentral(texto: String, botao: String? = null, onClick: () ->
         }
     }
 }
-
-private fun formatarData(iso: String): String =
-    runCatching { LocalDate.parse(iso).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }.getOrDefault(iso)
