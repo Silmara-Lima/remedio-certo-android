@@ -7,18 +7,32 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
-import retrofit2.http.Query
-import retrofit2.http.DELETE
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface RemedioCertoApi {
+    // ---------- Autenticação ----------
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
-    @GET("estoque") suspend fun listarEstoque(): List<EstoqueDto>
+
+    // ---------- Dashboard ----------
+    @GET("dashboard") suspend fun dashboard(): DashboardDto
+
+    // ---------- Estoque ----------
     @GET("estoque") suspend fun listarEstoque(@Query("medicamento_id") medicamentoId: Int? = null): List<EstoqueDto>
+
+    // ---------- Movimentações ----------
+    @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
+    @GET("movimentacoes") suspend fun listarMovimentacoes(
+        @Query("tipo") tipo: String? = null,
+        @Query("limite") limite: Int = 100,
+    ): List<HistoricoDto>
+
+    // ---------- Medicamentos ----------
     @GET("medicamentos") suspend fun buscarMedicamentos(
         @Query("busca") busca: String? = null,
         @Query("somente_ativos") somenteAtivos: Boolean = true,
@@ -28,14 +42,21 @@ interface RemedioCertoApi {
     @PUT("medicamentos/{id}") suspend fun atualizarMedicamento(@Path("id") id: Int, @Body body: MedicamentoRequest): MedicamentoDto
     @DELETE("medicamentos/{id}") suspend fun desativarMedicamento(@Path("id") id: Int): MensagemDto
 
-    @GET("unidades") suspend fun listarUnidades(): List<UnidadeDto>
-    @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
+    // ---------- Unidades ----------
+    @GET("unidades") suspend fun listarUnidades(@Query("somente_ativas") somenteAtivas: Boolean = true): List<UnidadeDto>
+    @GET("unidades/{id}") suspend fun buscarUnidade(@Path("id") id: Int): UnidadeDto
+    @POST("unidades") suspend fun criarUnidade(@Body body: UnidadeRequest): UnidadeDto
+    @PUT("unidades/{id}") suspend fun atualizarUnidade(@Path("id") id: Int, @Body body: UnidadeRequest): UnidadeDto
+    @DELETE("unidades/{id}") suspend fun desativarUnidade(@Path("id") id: Int): MensagemDto
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://127.0.0.1:8000/"   // http://10.0.2.2:8000/ trocar depois
-    // & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:8000 tcp:8000 usar túnel no powershell
-    var token: String? = null                              // depois vai para o DataStore
+    // Emulador com túnel (adb reverse tcp:8000 tcp:8000): http://127.0.0.1:8000/
+    // Sem túnel, no emulador: http://10.0.2.2:8000/
+    // Quando a API estiver hospedada, trocar pelo endereço https dela.
+    private const val BASE_URL = "http://127.0.0.1:8000/"
+
+    var token: String? = null
 
     private val json = Json { ignoreUnknownKeys = true }
 

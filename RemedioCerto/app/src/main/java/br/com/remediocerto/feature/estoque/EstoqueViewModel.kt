@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.EstoqueDto
+import br.com.remediocerto.core.network.mensagemDeErro
 import br.com.remediocerto.core.ui.StatusEstoque
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -34,17 +35,13 @@ class EstoqueViewModel : ViewModel() {
     var busca by mutableStateOf("")
     var filtro by mutableStateOf<StatusEstoque?>(null)
 
-    init { carregar() }
-
+    // O carregamento é disparado pela tela (LaunchedEffect), sempre que a aba é aberta.
     fun carregar(puxouParaAtualizar: Boolean = false) = viewModelScope.launch {
         if (puxouParaAtualizar) atualizando = true else estado = EstoqueUiState.Carregando
         estado = try {
             EstoqueUiState.Sucesso(agrupar(ApiClient.api.listarEstoque()))
         } catch (e: HttpException) {
-            EstoqueUiState.Erro(
-                if (e.code() == 401) "Sessão expirada. Toque em Sair (aba Mais) e entre novamente."
-                else "Erro ${e.code()} ao carregar o estoque."
-            )
+            EstoqueUiState.Erro(mensagemDeErro(e))
         } catch (e: IOException) {
             EstoqueUiState.Erro("Não foi possível conectar à API.")
         }

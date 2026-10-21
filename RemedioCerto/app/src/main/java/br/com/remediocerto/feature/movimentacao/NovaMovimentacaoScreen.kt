@@ -21,6 +21,7 @@ import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.feature.scanner.iniciarScanner
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import br.com.remediocerto.core.ui.MascaraData
 
 @Composable
 fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
@@ -100,8 +101,16 @@ fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
             if (vm.tipo == TipoMov.ENTRADA) {
                 OutlinedTextField(vm.novoLote, { vm.novoLote = it }, label = { Text("Número do lote") },
                     singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(vm.validade, { vm.validade = it }, label = { Text("Validade (dd/mm/aaaa)") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = vm.validade,
+                    onValueChange = { vm.validade = it.filter(Char::isDigit).take(8) },
+                    label = { Text("Validade") },
+                    placeholder = { Text("dd/mm/aaaa") },
+                    visualTransformation = MascaraData(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             } else {
                 val lotes = vm.lotesDisponiveis()
                 if (lotes.isEmpty()) {

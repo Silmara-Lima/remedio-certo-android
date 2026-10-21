@@ -13,6 +13,7 @@ import retrofit2.HttpException
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 
 enum class TipoMov(val api: String, val rotulo: String) {
     SAIDA("saida", "Saída"),
@@ -35,7 +36,7 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     var loteSelecionado by mutableStateOf<EstoqueDto?>(null)
 
     var novoLote by mutableStateOf("")
-    var validade by mutableStateOf("")          // dd/mm/aaaa (somente na entrada)
+    var validade by mutableStateOf("")          // só dígitos, ex.: "31122027" (a tela mostra 31/12/2027)
     var quantidade by mutableStateOf("")
     var documento by mutableStateOf("")
     var observacao by mutableStateOf("")
@@ -56,16 +57,21 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     fun onBuscaChange(texto: String) {
         busca = texto
         buscaJob?.cancel()
-        if (texto.trim().length < 2) { sugestoes = emptyList(); return }
+        if (texto.trim().length < 2) {
+            sugestoes = emptyList(); return
+        }
         buscaJob = viewModelScope.launch {
             delay(300)                                  // espera o usuário parar de digitar
-            sugestoes = runCatching { ApiClient.api.buscarMedicamentos(texto.trim()) }.getOrDefault(emptyList())
+            sugestoes = runCatching { ApiClient.api.buscarMedicamentos(texto.trim()) }.getOrDefault(
+                emptyList()
+            )
         }
     }
 
     fun processarCodigo(codigo: String) = viewModelScope.launch {
         erro = null
-        val achados = runCatching { ApiClient.api.buscarMedicamentos(codigo) }.getOrDefault(emptyList())
+        val achados =
+            runCatching { ApiClient.api.buscarMedicamentos(codigo) }.getOrDefault(emptyList())
         val m = achados.firstOrNull { it.codigoBarras == codigo } ?: achados.firstOrNull()
         if (m != null) selecionarMedicamento(m)
         else erro = "Nenhum medicamento cadastrado com o código $codigo."
@@ -81,9 +87,13 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     }
 
     // ---------- tipo, unidade e lote ----------
-    fun selecionarTipo(t: TipoMov) { tipo = t; mensagem = null; erro = null; ajustarLote() }
+    fun selecionarTipo(t: TipoMov) {
+        tipo = t; mensagem = null; erro = null; ajustarLote()
+    }
 
-    fun selecionarUnidade(id: Int) { unidadeId = id; ajustarLote() }
+    fun selecionarUnidade(id: Int) {
+        unidadeId = id; ajustarLote()
+    }
 
     fun lotesDisponiveis(): List<EstoqueDto> = lotes
         .filter { it.unidadeId == unidadeId }
@@ -115,28 +125,57 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
         val m = medicamento
         val unidade = unidadeId
         val qtd = quantidade.trim().toIntOrNull()
-        if (m == null) { erro = "Selecione o medicamento."; return }
-        if (unidade == null) { erro = "Selecione a unidade."; return }
-        if (qtd == null || qtd < 0 || (qtd == 0 && tipo != TipoMov.AJUSTE)) { erro = "Informe uma quantidade válida."; return }
+        if (m == null) {
+            erro = "Selecione o medicamento."; return
+        }
+        if (unidade == null) {
+            erro = "Selecione a unidade."; return
+        }
+        if (qtd == null || qtd < 0 || (qtd == 0 && tipo != TipoMov.AJUSTE)) {
+            erro = "Informe uma quantidade válida."; return
+        }
 
         val req = if (tipo == TipoMov.ENTRADA) {
             val validadeIso = paraIso(validade)
-            if (novoLote.isBlank()) { erro = "Informe o número do lote."; return }
-            if (validadeIso == null) { erro = "Informe a validade no formato dd/mm/aaaa."; return }
-            MovimentacaoRequest(tipo.api, m.id, unidade, novoLote.trim(), validadeIso, qtd,
-                numeroDocumento = documento.ifBlank { null }, observacao = observacao.ifBlank { null })
+            if (novoLote.isBlank()) {
+                erro = "Informe o número do lote."; return
+            }
+            if (validadeIso == null) {
+                erro = "Informe uma validade válida (dd/mm/aaaa)."; return
+            }
+            if (LocalDate.parse(validadeIso).isBefore(LocalDate.now())) {
+                erro = "A validade não pode ser uma data passada."; return
+            }
+            MovimentacaoRequest(
+                tipo.api,
+                m.id,
+                unidade,
+                novoLote.trim(),
+                validadeIso,
+                qtd,
+                numeroDocumento = documento.ifBlank { null },
+                observacao = observacao.ifBlank { null })
         } else {
             val lote = loteSelecionado
-            if (lote == null) { erro = "Selecione o lote."; return }
+            if (lote == null) {
+                erro = "Selecione o lote."; return
+            }
             if (tipo != TipoMov.AJUSTE && qtd > lote.quantidade) {                 // RN01
                 erro = "Saldo insuficiente: o lote ${lote.lote} tem ${lote.quantidade} un."; return
             }
             if (tipo == TipoMov.AJUSTE && observacao.isBlank()) {                 // RN06
                 erro = "Informe a justificativa do ajuste no campo Observação."; return
             }
-            MovimentacaoRequest(tipo.api, m.id, unidade, lote.lote, lote.validade, qtd,
+            MovimentacaoRequest(
+                tipo.api,
+                m.id,
+                unidade,
+                lote.lote,
+                lote.validade,
+                qtd,
                 estoqueLoteId = lote.id,
-                numeroDocumento = documento.ifBlank { null }, observacao = observacao.ifBlank { null })
+                numeroDocumento = documento.ifBlank { null },
+                observacao = observacao.ifBlank { null })
         }
 
         viewModelScope.launch {
@@ -155,7 +194,10 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
         }
     }
 
-    private fun paraIso(br: String): String? = runCatching {
-        LocalDate.parse(br.trim(), DateTimeFormatter.ofPattern("dd/MM/yyyy")).toString()
+    private fun paraIso(digitos: String): String? = runCatching {
+        LocalDate.parse(
+            digitos,
+            DateTimeFormatter.ofPattern("ddMMuuuu").withResolverStyle(ResolverStyle.STRICT),
+        ).toString()
     }.getOrNull()
 }

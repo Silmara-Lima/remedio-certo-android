@@ -3,9 +3,9 @@ package br.com.remediocerto.core.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// ---------- Autenticação ----------
 @Serializable
 data class LoginRequest(val email: String, val senha: String)
-
 
 @Serializable
 data class UsuarioDto(
@@ -25,52 +25,32 @@ data class TokenResponse(
 )
 
 @Serializable
-data class UnidadeDto(val id: Int, val nome: String)
+data class UsuarioResumoDto(val id: Int, val nome: String)
 
 @Serializable
-data class EstoqueDto(
+data class MensagemDto(val mensagem: String)
+
+// ---------- Unidades ----------
+@Serializable
+data class UnidadeDto(
     val id: Int,
-    @SerialName("medicamento_id") val medicamentoId: Int,
-    @SerialName("unidade_id") val unidadeId: Int,
-    val lote: String,
-    val validade: String,               // "2026-12-15"
-    val quantidade: Int,
-    @SerialName("dias_para_vencer") val diasParaVencer: Int,
-    @SerialName("status_estoque") val status: String,
-    val medicamento: MedicamentoDto? = null,
-    val unidade: UnidadeDto? = null,
+    val nome: String,
+    val cnpj: String? = null,
+    val endereco: String? = null,
+    val telefone: String? = null,
+    val ativa: Boolean = true,
 )
 
 @Serializable
-data class MovimentacaoRequest(
-    val tipo: String,                                   // entrada | saida | descarte | ajuste
-    @SerialName("medicamento_id") val medicamentoId: Int,
-    @SerialName("unidade_id") val unidadeId: Int,
-    val lote: String,
-    val validade: String,                               // "2026-12-15"
-    val quantidade: Int,
-    @SerialName("estoque_lote_id") val estoqueLoteId: Int? = null,
-    @SerialName("numero_documento") val numeroDocumento: String? = null,
-    val observacao: String? = null,
+data class UnidadeRequest(
+    val nome: String,
+    val cnpj: String?,
+    val endereco: String?,
+    val telefone: String?,
+    val ativa: Boolean,
 )
 
-@Serializable
-data class MovimentacaoDto(
-    val id: Int,
-    val tipo: String,
-    @SerialName("medicamento_id") val medicamentoId: Int,
-    @SerialName("unidade_id") val unidadeId: Int,
-    val lote: String,
-    val validade: String,
-    val quantidade: Int,
-    @SerialName("numero_documento") val numeroDocumento: String? = null,
-    val observacao: String? = null,
-    @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("usuario_id") val usuarioId: Int? = null,
-    val medicamento: MedicamentoDto? = null,
-    val unidade: UnidadeDto? = null,
-)
-
+// ---------- Medicamentos ----------
 @Serializable
 data class MedicamentoDto(
     val id: Int,
@@ -98,5 +78,87 @@ data class MedicamentoRequest(
     val ativo: Boolean,
 )
 
+// ---------- Estoque ----------
 @Serializable
-data class MensagemDto(val mensagem: String)
+data class EstoqueDto(
+    val id: Int,
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    val lote: String,
+    val validade: String,               // "2026-12-15"
+    val quantidade: Int,
+    @SerialName("dias_para_vencer") val diasParaVencer: Int,
+    @SerialName("status_estoque") val status: String,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+)
+
+// ---------- Movimentações ----------
+@Serializable
+data class MovimentacaoRequest(
+    val tipo: String,                                   // entrada | saida | descarte | ajuste
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    val lote: String,
+    val validade: String,                               // "2026-12-15"
+    val quantidade: Int,
+    @SerialName("estoque_lote_id") val estoqueLoteId: Int? = null,
+    @SerialName("numero_documento") val numeroDocumento: String? = null,
+    val observacao: String? = null,
+)
+
+@Serializable
+data class MovimentacaoDto(
+    val id: Int,
+    val tipo: String,
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    val lote: String,
+    val validade: String,
+    val quantidade: Int,
+    @SerialName("numero_documento") val numeroDocumento: String? = null,
+    val observacao: String? = null,
+    @SerialName("criada_em") val criadaEm: String? = null,
+    @SerialName("usuario_id") val usuarioId: Int? = null,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+)
+
+@Serializable
+data class HistoricoDto(
+    val id: Int,
+    val tipo: String,                   // "entrada", "saida"...
+    val lote: String,
+    val validade: String,
+    val quantidade: Int,
+    @SerialName("numero_documento") val numeroDocumento: String? = null,
+    val observacao: String? = null,
+    @SerialName("criada_em") val criadaEm: String,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+    val usuario: UsuarioResumoDto? = null,
+)
+
+// ---------- Dashboard ----------
+@Serializable
+data class MovRecenteDto(
+    val id: Int,
+    val tipo: String,                   // "ENTRADA", "SAIDA"...
+    val medicamento: String? = null,
+    val unidade: String? = null,
+    val lote: String? = null,
+    val quantidade: Int = 0,
+    val responsavel: String? = null,
+    val data: String? = null,
+)
+
+@Serializable
+data class DashboardDto(
+    val alertasAtivos: Int = 0,
+    val estoqueCritico: Int = 0,
+    val lotesVencimentoProximo: Int = 0,
+    val movimentacoesHoje: Int = 0,
+    val totalMedicamentos: Int = 0,
+    val totalLotes: Int = 0,
+    val movimentacoesRecentes: List<MovRecenteDto> = emptyList(),
+)

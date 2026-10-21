@@ -14,17 +14,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import br.com.remediocerto.core.network.UsuarioDto
-import br.com.remediocerto.feature.estoque.EstoqueScreen
-import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
-import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentosScreen
+import br.com.remediocerto.feature.cadastros.unidades.UnidadeFormScreen
+import br.com.remediocerto.feature.cadastros.unidades.UnidadesScreen
+import br.com.remediocerto.feature.dashboard.DashboardScreen
+import br.com.remediocerto.feature.estoque.EstoqueScreen
+import br.com.remediocerto.feature.historico.HistoricoScreen
+import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
 
 enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     INICIO("inicio", "Início", Icons.Filled.Home),
@@ -40,19 +44,21 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
     val entrada by nav.currentBackStackEntryAsState()
     val rotaAtual = entrada?.destination?.route
 
+    fun irParaAba(rota: String) {
+        nav.navigate(rota) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
                 Aba.entries.forEach { aba ->
                     NavigationBarItem(
                         selected = rotaAtual == aba.rota,
-                        onClick = {
-                            nav.navigate(aba.rota) {
-                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onClick = { irParaAba(aba.rota) },
                         icon = { Icon(aba.icone, contentDescription = aba.titulo) },
                         label = { Text(aba.titulo) },
                     )
@@ -61,17 +67,32 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
         }
     ) { padding ->
         NavHost(nav, startDestination = Aba.INICIO.rota, modifier = Modifier.padding(padding)) {
-            composable(Aba.INICIO.rota) { TelaProvisoria("Início", "Olá, ${usuario.nome}!") }
+
+            // ---------- Abas ----------
+            composable(Aba.INICIO.rota) {
+                DashboardScreen(
+                    usuario = usuario,
+                    onVerHistorico = { nav.navigate("historico") },
+                    onNovaMovimentacao = { irParaAba(Aba.ESCANEAR.rota) },
+                )
+            }
             composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
             composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
             composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
             composable(Aba.MAIS.rota) {
                 MaisScreen(
-                    usuario, onSair,
+                    usuario = usuario,
+                    onSair = onSair,
                     onHistorico = { nav.navigate("historico") },
                     onMedicamentos = { nav.navigate("medicamentos") },
+                    onUnidades = { nav.navigate("unidades") },
                 )
             }
+
+            // ---------- Histórico ----------
+            composable("historico") { HistoricoScreen(onVoltar = { nav.popBackStack() }) }
+
+            // ---------- Cadastro de medicamentos ----------
             composable("medicamentos") {
                 MedicamentosScreen(
                     onVoltar = { nav.popBackStack() },
@@ -82,8 +103,23 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
             composable("medicamento-novo") {
                 MedicamentoFormScreen(id = null, onConcluido = { nav.popBackStack() })
             }
-            composable("medicamento/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { entrada ->
-                MedicamentoFormScreen(id = entrada.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+            composable("medicamento/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+                MedicamentoFormScreen(id = e.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+            }
+
+            // ---------- Cadastro de unidades ----------
+            composable("unidades") {
+                UnidadesScreen(
+                    onVoltar = { nav.popBackStack() },
+                    onNova = { nav.navigate("unidade-nova") },
+                    onEditar = { id -> nav.navigate("unidade/$id") },
+                )
+            }
+            composable("unidade-nova") {
+                UnidadeFormScreen(id = null, onConcluido = { nav.popBackStack() })
+            }
+            composable("unidade/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
+                UnidadeFormScreen(id = e.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
             }
         }
     }
@@ -99,7 +135,13 @@ fun TelaProvisoria(titulo: String, subtitulo: String = "Em construção") {
 }
 
 @Composable
-fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit, onHistorico: () -> Unit, onMedicamentos: () -> Unit) {
+fun MaisScreen(
+    usuario: UsuarioDto,
+    onSair: () -> Unit,
+    onHistorico: () -> Unit,
+    onMedicamentos: () -> Unit,
+    onUnidades: () -> Unit,
+) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -114,7 +156,8 @@ fun MaisScreen(usuario: UsuarioDto, onSair: () -> Unit, onHistorico: () -> Unit,
         if (usuario.tipo == "ADMIN") {
             Text("Cadastros", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             OutlinedButton(onClick = onMedicamentos, modifier = Modifier.fillMaxWidth()) { Text("Medicamentos") }
-            // Unidades e Usuários entram aqui nos próximos passos
+            OutlinedButton(onClick = onUnidades, modifier = Modifier.fillMaxWidth()) { Text("Unidades de saúde") }
+            // Usuários entra aqui no próximo passo
         }
 
         Spacer(Modifier.height(12.dp))
