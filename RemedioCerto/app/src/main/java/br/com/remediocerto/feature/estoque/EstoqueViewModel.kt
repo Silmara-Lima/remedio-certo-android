@@ -39,7 +39,7 @@ class EstoqueViewModel : ViewModel() {
     fun carregar(puxouParaAtualizar: Boolean = false) = viewModelScope.launch {
         if (puxouParaAtualizar) atualizando = true else estado = EstoqueUiState.Carregando
         estado = try {
-            EstoqueUiState.Sucesso(agrupar(ApiClient.api.listarEstoque()))
+            EstoqueUiState.Sucesso(agruparEstoque(ApiClient.api.listarEstoque()))
         } catch (e: HttpException) {
             EstoqueUiState.Erro(mensagemDeErro(e))
         } catch (e: IOException) {
@@ -52,30 +52,31 @@ class EstoqueViewModel : ViewModel() {
         (filtro == null || item.status == filtro) &&
                 (busca.isBlank() || item.nome.contains(busca.trim(), ignoreCase = true))
     }
-
-    // A API devolve um registro por lote; aqui agrupamos por medicamento + unidade.
-    private fun agrupar(lotes: List<EstoqueDto>): List<ItemEstoque> =
-        lotes.groupBy { "${it.medicamentoId}-${it.unidadeId}" }
-            .map { (chave, grupo) ->
-                val primeiro = grupo.first()
-                val total = grupo.sumOf { it.quantidade }
-                val minimo = primeiro.medicamento?.quantidadeMinima ?: 0
-                val situacoes = grupo.map { StatusEstoque.de(it.status) }
-                val status = when {
-                    StatusEstoque.VENCIDO in situacoes -> StatusEstoque.VENCIDO
-                    total <= minimo -> StatusEstoque.BAIXO
-                    StatusEstoque.VENCENDO in situacoes -> StatusEstoque.VENCENDO
-                    else -> StatusEstoque.NORMAL
-                }
-                ItemEstoque(
-                    chave = chave,
-                    nome = primeiro.medicamento?.nome ?: "Medicamento ${primeiro.medicamentoId}",
-                    unidade = primeiro.unidade?.nome,
-                    total = total,
-                    minimo = minimo,
-                    status = status,
-                    lotes = grupo.sortedBy { it.validade },   // FEFO: vence primeiro, aparece primeiro
-                )
-            }
-            .sortedWith(compareByDescending<ItemEstoque> { it.status.gravidade }.thenBy { it.nome })
 }
+
+// A API devolve um registro por lote; aqui agrupamos por medicamento + unidade.
+// Fica fora do ViewModel para poder ser testada sem a API.
+fun agruparEstoque(lotes: List<EstoqueDto>): List<ItemEstoque> =
+    lotes.groupBy { "${it.medicamentoId}-${it.unidadeId}" }
+        .map { (chave, grupo) ->
+            val primeiro = grupo.first()
+            val total = grupo.sumOf { it.quantidade }
+            val minimo = primeiro.medicamento?.quantidadeMinima ?: 0
+            val situacoes = grupo.map { StatusEstoque.de(it.status) }
+            val status = when {
+                StatusEstoque.VENCIDO in situacoes -> StatusEstoque.VENCIDO
+                total <= minimo -> StatusEstoque.BAIXO
+                StatusEstoque.VENCENDO in situacoes -> StatusEstoque.VENCENDO
+                else -> StatusEstoque.NORMAL
+            }
+            ItemEstoque(
+                chave = chave,
+                nome = primeiro.medicamento?.nome ?: "Medicamento ${primeiro.medicamentoId}",
+                unidade = primeiro.unidade?.nome,
+                total = total,
+                minimo = minimo,
+                status = status,
+                lotes = grupo.sortedBy { it.validade },   // FEFO: vence primeiro, aparece primeiro
+            )
+        }
+        .sortedWith(compareByDescending<ItemEstoque> { it.status.gravidade }.thenBy { it.nome })
