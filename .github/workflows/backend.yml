@@ -1,0 +1,91 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+      - 'render.yaml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+      - 'render.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: API (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgresql]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: remedio_certo
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: remedio_certo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U remedio_certo -d remedio_certo_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ENVIRONMENT: test
+      SECRET_KEY: ci-only-secret-key-with-at-least-32-characters
+      ALERTS_ENABLED: 'false'
+      DATABASE_URL: ${{ matrix.database == 'postgresql' && 'postgresql+psycopg://remedio_certo:ci-only-password@localhost:5432/remedio_certo_test' || 'sqlite:///./ci-test.db' }}
+      TEST_DATABASE_URL: ${{ matrix.database == 'postgresql' && 'postgresql+psycopg://remedio_certo:ci-only-password@localhost:5432/remedio_certo_test' || 'sqlite:///./ci-test.db' }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - name: Instalar dependências
+        run: python -m pip install -r requirements-dev.txt
+      - name: Validar criação de tabelas e repetição segura
+        run: |
+          python -m app.init_db
+          python -m app.init_db
+      - name: Executar testes da API
+        run: python -m pytest -q --cov=app --cov-report=term-missing --cov-fail-under=70
+
+  docker:
+    name: Imagem Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Construir imagem da API
+        run: docker build --tag remedio-certo-api:ci backend
+      - name: Iniciar imagem e verificar saúde
+        run: |
+          docker run -d --name remedio-certo-smoke -p 127.0.0.1:8000:8000 -e ALERTS_ENABLED=false remedio-certo-api:ci
+          curl --fail --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:8000/health
+      - name: Diagnóstico do contêiner
+        if: failure()
+        run: docker logs remedio-certo-smoke || true
