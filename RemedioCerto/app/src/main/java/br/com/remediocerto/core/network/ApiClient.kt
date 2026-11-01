@@ -64,7 +64,7 @@ object ApiClient {
     // Emulador com túnel (adb reverse tcp:8000 tcp:8000): http://127.0.0.1:8000/
     // Sem túnel, no emulador: http://10.0.2.2:8000/
     // Quando a API estiver hospedada, trocar pelo endereço https dela.
-    private const val BASE_URL = "http://127.0.0.1:8000/"
+    private const val BASE_URL = " http://127.0.0.1:8000/"
 
     var token: String? = null
 

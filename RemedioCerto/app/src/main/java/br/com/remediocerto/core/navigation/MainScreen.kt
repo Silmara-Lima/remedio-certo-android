@@ -1,3 +1,4 @@
+
 package br.com.remediocerto.core.navigation
 
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+
 import br.com.remediocerto.core.network.UsuarioDto
+
+import br.com.remediocerto.feature.RelatoriosScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentosScreen
 import br.com.remediocerto.feature.cadastros.unidades.UnidadeFormScreen
@@ -33,7 +37,13 @@ import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
 import br.com.remediocerto.feature.perfil.TrocarSenhaScreen
 
-enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
+// ---------- Abas principais ----------
+
+enum class Aba(
+    val rota: String,
+    val titulo: String,
+    val icone: ImageVector
+) {
     INICIO("inicio", "Início", Icons.Filled.Home),
     ESTOQUE("estoque", "Estoque", Icons.AutoMirrored.Filled.List),
     ESCANEAR("escanear", "Escanear", Icons.Filled.Search),
@@ -41,15 +51,24 @@ enum class Aba(val rota: String, val titulo: String, val icone: ImageVector) {
     MAIS("mais", "Mais", Icons.Filled.Menu),
 }
 
+// ---------- Tela principal ----------
+
 @Composable
-fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
+fun MainScreen(
+    usuario: UsuarioDto,
+    onSair: () -> Unit
+) {
+
     val nav = rememberNavController()
+
     val entrada by nav.currentBackStackEntryAsState()
     val rotaAtual = entrada?.destination?.route
 
     fun irParaAba(rota: String) {
         nav.navigate(rota) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            popUpTo(nav.graph.findStartDestination().id) {
+                saveState = true
+            }
             launchSingleTop = true
             restoreState = true
         }
@@ -58,102 +77,310 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
     Scaffold(
         bottomBar = {
             NavigationBar {
+
                 Aba.entries.forEach { aba ->
+
                     NavigationBarItem(
                         selected = rotaAtual == aba.rota,
-                        onClick = { irParaAba(aba.rota) },
-                        icon = { Icon(aba.icone, contentDescription = aba.titulo) },
-                        label = { Text(aba.titulo) },
+                        onClick = {
+                            irParaAba(aba.rota)
+                        },
+                        icon = {
+                            Icon(
+                                aba.icone,
+                                contentDescription = aba.titulo
+                            )
+                        },
+                        label = {
+                            Text(aba.titulo)
+                        }
                     )
                 }
             }
         }
     ) { padding ->
-        NavHost(nav, startDestination = Aba.INICIO.rota, modifier = Modifier.padding(padding)) {
 
-            // ---------- Abas ----------
+        NavHost(
+            navController = nav,
+            startDestination = Aba.INICIO.rota,
+            modifier = Modifier.padding(padding)
+        ) {
+
+            // ---------- Início ----------
+
             composable(Aba.INICIO.rota) {
+
                 DashboardScreen(
                     usuario = usuario,
-                    onVerHistorico = { nav.navigate("historico") },
-                    onNovaMovimentacao = { irParaAba(Aba.ESCANEAR.rota) },
+
+                    onVerHistorico = {
+                        nav.navigate("historico")
+                    },
+
+                    onNovaMovimentacao = {
+                        irParaAba(Aba.ESCANEAR.rota)
+                    }
                 )
             }
-            composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
-            composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
-            composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
+
+            // ---------- Estoque ----------
+
+            composable(Aba.ESTOQUE.rota) {
+                EstoqueScreen()
+            }
+
+            // ---------- Escanear ----------
+
+            composable(Aba.ESCANEAR.rota) {
+
+                NovaMovimentacaoScreen(
+                    usuario,
+                    abrirScanner = true
+                )
+            }
+
+            // ---------- Alertas ----------
+
+            composable(Aba.ALERTAS.rota) {
+                TelaProvisoria("Alertas")
+            }
+
+            // ---------- Menu Mais ----------
+
             composable(Aba.MAIS.rota) {
+
                 MaisScreen(
                     usuario = usuario,
                     onSair = onSair,
-                    onHistorico = { nav.navigate("historico") },
-                    onMedicamentos = { nav.navigate("medicamentos") },
-                    onUnidades = { nav.navigate("unidades") },
-                    onUsuarios = { nav.navigate("usuarios") },
-                    onTrocarSenha = { nav.navigate("trocar-senha") },
+
+                    onHistorico = {
+                        nav.navigate("historico")
+                    },
+
+                    onMedicamentos = {
+                        nav.navigate("medicamentos")
+                    },
+
+                    onUnidades = {
+                        nav.navigate("unidades")
+                    },
+
+                    onUsuarios = {
+                        nav.navigate("usuarios")
+                    },
+
+                    onTrocarSenha = {
+                        nav.navigate("trocar-senha")
+                    },
+
+                    onGerarRelatorios = {
+                        nav.navigate("relatorios")
+                    }
                 )
             }
 
             // ---------- Histórico ----------
-            composable("historico") { HistoricoScreen(onVoltar = { nav.popBackStack() }) }
-            composable("trocar-senha") { TrocarSenhaScreen(onVoltar = { nav.popBackStack() }) }
 
-            // ---------- Cadastro de medicamentos ----------
-            composable("medicamentos") {
-                MedicamentosScreen(
-                    onVoltar = { nav.popBackStack() },
-                    onNovo = { nav.navigate("medicamento-novo") },
-                    onEditar = { id -> nav.navigate("medicamento/$id") },
+            composable("historico") {
+
+                HistoricoScreen(
+                    onVoltar = {
+                        nav.popBackStack()
+                    }
                 )
             }
-            composable("medicamento-novo") {
-                MedicamentoFormScreen(id = null, onConcluido = { nav.popBackStack() })
+
+            // ---------- Trocar senha ----------
+
+            composable("trocar-senha") {
+
+                TrocarSenhaScreen(
+                    onVoltar = {
+                        nav.popBackStack()
+                    }
+                )
             }
-            composable("medicamento/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
-                MedicamentoFormScreen(id = e.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+
+            // ---------- Relatórios PDF ----------
+
+            composable("relatorios") {
+
+                RelatoriosScreen(
+                    onVoltar = {
+                        nav.popBackStack()
+                    }
+                )
+            }
+
+            // ---------- Cadastro de medicamentos ----------
+
+            composable("medicamentos") {
+
+                MedicamentosScreen(
+                    onVoltar = {
+                        nav.popBackStack()
+                    },
+
+                    onNovo = {
+                        nav.navigate("medicamento-novo")
+                    },
+
+                    onEditar = { id ->
+                        nav.navigate("medicamento/$id")
+                    }
+                )
+            }
+
+            composable("medicamento-novo") {
+
+                MedicamentoFormScreen(
+                    id = null,
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
+            }
+
+            composable(
+                "medicamento/{id}",
+                arguments = listOf(
+                    navArgument("id") {
+                        type = NavType.IntType
+                    }
+                )
+            ) { e ->
+
+                MedicamentoFormScreen(
+                    id = e.arguments?.getInt("id"),
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
             }
 
             // ---------- Cadastro de usuários ----------
+
             composable("usuarios") {
+
                 UsuariosScreen(
-                    onVoltar = { nav.popBackStack() },
-                    onNovo = { nav.navigate("usuario-novo") },
-                    onEditar = { id -> nav.navigate("usuario/$id") },
+                    onVoltar = {
+                        nav.popBackStack()
+                    },
+
+                    onNovo = {
+                        nav.navigate("usuario-novo")
+                    },
+
+                    onEditar = { id ->
+                        nav.navigate("usuario/$id")
+                    }
                 )
             }
+
             composable("usuario-novo") {
-                UsuarioFormScreen(id = null, usuarioLogadoId = usuario.id, onConcluido = { nav.popBackStack() })
+
+                UsuarioFormScreen(
+                    id = null,
+                    usuarioLogadoId = usuario.id,
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
             }
-            composable("usuario/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
-                UsuarioFormScreen(id = e.arguments?.getInt("id"), usuarioLogadoId = usuario.id, onConcluido = { nav.popBackStack() })
+
+            composable(
+                "usuario/{id}",
+                arguments = listOf(
+                    navArgument("id") {
+                        type = NavType.IntType
+                    }
+                )
+            ) { e ->
+
+                UsuarioFormScreen(
+                    id = e.arguments?.getInt("id"),
+                    usuarioLogadoId = usuario.id,
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
             }
 
             // ---------- Cadastro de unidades ----------
+
             composable("unidades") {
+
                 UnidadesScreen(
-                    onVoltar = { nav.popBackStack() },
-                    onNova = { nav.navigate("unidade-nova") },
-                    onEditar = { id -> nav.navigate("unidade/$id") },
+                    onVoltar = {
+                        nav.popBackStack()
+                    },
+
+                    onNova = {
+                        nav.navigate("unidade-nova")
+                    },
+
+                    onEditar = { id ->
+                        nav.navigate("unidade/$id")
+                    }
                 )
             }
+
             composable("unidade-nova") {
-                UnidadeFormScreen(id = null, onConcluido = { nav.popBackStack() })
+
+                UnidadeFormScreen(
+                    id = null,
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
             }
-            composable("unidade/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e ->
-                UnidadeFormScreen(id = e.arguments?.getInt("id"), onConcluido = { nav.popBackStack() })
+
+            composable(
+                "unidade/{id}",
+                arguments = listOf(
+                    navArgument("id") {
+                        type = NavType.IntType
+                    }
+                )
+            ) { e ->
+
+                UnidadeFormScreen(
+                    id = e.arguments?.getInt("id"),
+                    onConcluido = {
+                        nav.popBackStack()
+                    }
+                )
             }
         }
     }
 }
 
+// ---------- Tela provisória ----------
+
 @Composable
-fun TelaProvisoria(titulo: String, subtitulo: String = "Em construção") {
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Text(titulo, style = MaterialTheme.typography.headlineSmall)
+fun TelaProvisoria(
+    titulo: String,
+    subtitulo: String = "Em construção"
+) {
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+
+        Text(
+            titulo,
+            style = MaterialTheme.typography.headlineSmall
+        )
+
         Spacer(Modifier.height(8.dp))
+
         Text(subtitulo)
     }
 }
+
+// ---------- Tela Mais ----------
 
 @Composable
 fun MaisScreen(
@@ -164,27 +391,95 @@ fun MaisScreen(
     onUnidades: () -> Unit,
     onUsuarios: () -> Unit,
     onTrocarSenha: () -> Unit,
+    onGerarRelatorios: () -> Unit
 ) {
+
     Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(usuario.nome, style = MaterialTheme.typography.headlineSmall)
+
+        Text(
+            usuario.nome,
+            style = MaterialTheme.typography.headlineSmall
+        )
+
         Text(usuario.email)
+
         Text("Perfil: ${usuario.tipo}")
+
         Spacer(Modifier.height(12.dp))
 
-        OutlinedButton(onClick = onHistorico, modifier = Modifier.fillMaxWidth()) { Text("Histórico de movimentações") }
-        OutlinedButton(onClick = onTrocarSenha, modifier = Modifier.fillMaxWidth()) { Text("Trocar senha") }
+        // Histórico
+
+        OutlinedButton(
+            onClick = onHistorico,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Histórico de movimentações")
+        }
+
+        // Trocar senha
+
+        OutlinedButton(
+            onClick = onTrocarSenha,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Trocar senha")
+        }
+
+        // Gerar relatórios PDF
+
+        OutlinedButton(
+            onClick = onGerarRelatorios,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Gerar Relatórios PDF")
+        }
+
+        // Cadastros administrativos
 
         if (usuario.tipo == "ADMIN") {
-            Text("Cadastros", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            OutlinedButton(onClick = onMedicamentos, modifier = Modifier.fillMaxWidth()) { Text("Medicamentos") }
-            OutlinedButton(onClick = onUnidades, modifier = Modifier.fillMaxWidth()) { Text("Unidades de saúde") }
-            OutlinedButton(onClick = onUsuarios, modifier = Modifier.fillMaxWidth()) { Text("Usuários") }
+
+            Text(
+                "Cadastros",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            OutlinedButton(
+                onClick = onMedicamentos,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Medicamentos")
+            }
+
+            OutlinedButton(
+                onClick = onUnidades,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Unidades de saúde")
+            }
+
+            OutlinedButton(
+                onClick = onUsuarios,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Usuários")
+            }
         }
 
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onSair) { Text("Sair") }
+
+        // Sair
+
+        OutlinedButton(
+            onClick = onSair
+        ) {
+            Text("Sair")
+        }
     }
 }
