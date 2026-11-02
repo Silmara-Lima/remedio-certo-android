@@ -2,6 +2,7 @@ package br.com.remediocerto.core.network
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 // ---------- Autenticação ----------
 @Serializable
@@ -206,6 +207,23 @@ data class MovimentacaoDto(
     val medicamento: MedicamentoDto? = null,
     val unidade: UnidadeDto? = null,
 )
+
+// ---------- Envio em lote (movimentações feitas sem internet) ----------
+// Cada item é o JSON de uma MovimentacaoRequest mais o "id_local" (UUID).
+@Serializable
+data class LoteMovimentacoesRequest(val movimentacoes: List<JsonObject>)
+
+@Serializable
+data class ResultadoSyncDto(
+    @SerialName("id_local") val idLocal: String? = null,
+    val status: String,                                 // aceito | rejeitado
+    val repetida: Boolean = false,                      // a API já tinha recebido este id_local
+    val codigo: String? = null,
+    val mensagem: String? = null,
+)
+
+@Serializable
+data class LoteMovimentacoesResposta(val resultados: List<ResultadoSyncDto>)
 
 @Serializable
 data class HistoricoDto(

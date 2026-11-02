@@ -1,18 +1,30 @@
 package br.com.remediocerto.feature.movimentacao
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.remediocerto.core.database.DatabaseProvider
+import br.com.remediocerto.core.database.entity.MovimentacaoPendenteEntity
 import br.com.remediocerto.core.network.*
+import br.com.remediocerto.core.offline.Sincronizacao
+import br.com.remediocerto.core.offline.medicamentosDoCache
+import br.com.remediocerto.core.offline.paraDto
+import br.com.remediocerto.core.offline.paraLocal
+import br.com.remediocerto.core.offline.saldoDepois
+import br.com.remediocerto.core.offline.unidadesDoCache
 import br.com.remediocerto.core.ui.dataDigitosParaIso
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import java.io.IOException
 import java.time.LocalDate
+import java.util.UUID
 
 enum class TipoMov(val api: String, val rotulo: String) {
     SAIDA("saida", "Saída"),
@@ -21,9 +33,17 @@ enum class TipoMov(val api: String, val rotulo: String) {
     AJUSTE("ajuste", "Ajuste"),
 }
 
-class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
+class MovimentacaoViewModel(
+    private val usuario: UsuarioDto,
+    app: Application,
+) : AndroidViewModel(app) {
     val isAdmin = usuario.tipo == "ADMIN"
     var jaAbriuScanner = false
+
+    private val banco = DatabaseProvider.getDatabase(app)
+    private val estoqueLocal = banco.estoqueLocalDao()
+    private val pendentes = banco.movimentacaoPendenteDao()
+    private val json = Json { ignoreUnknownKeys = true }
 
     var tipo by mutableStateOf(TipoMov.SAIDA); private set
     var busca by mutableStateOf(""); private set
@@ -44,11 +64,20 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     var mensagem by mutableStateOf<String?>(null); private set
     var erro by mutableStateOf<String?>(null)
 
+    /** true quando os dados vieram do estoque salvo no aparelho (sem internet). */
+    var semConexao by mutableStateOf(false); private set
+
     private var buscaJob: Job? = null
 
     init {
         if (isAdmin) viewModelScope.launch {
-            unidades = runCatching { ApiClient.api.listarUnidades() }.getOrDefault(emptyList())
+            unidades = try {
+                ApiClient.api.listarUnidades()
+            } catch (e: IOException) {
+                unidadesDoCache(estoqueLocal.listarTodos())
+            } catch (e: HttpException) {
+                emptyList()
+            }
         }
     }
 
@@ -59,16 +88,26 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
         if (texto.trim().length < 2) { sugestoes = emptyList(); return }
         buscaJob = viewModelScope.launch {
             delay(300)
-            sugestoes = runCatching { ApiClient.api.buscarMedicamentos(texto.trim()) }.getOrDefault(emptyList())
+            sugestoes = buscarMedicamentos(texto.trim())
         }
     }
 
     fun processarCodigo(codigo: String) = viewModelScope.launch {
         erro = null
-        val achados = runCatching { ApiClient.api.buscarMedicamentos(codigo) }.getOrDefault(emptyList())
+        val achados = buscarMedicamentos(codigo)
         val m = achados.firstOrNull { it.codigoBarras == codigo } ?: achados.firstOrNull()
         if (m != null) selecionarMedicamento(m)
         else erro = "Nenhum medicamento cadastrado com o código $codigo."
+    }
+
+    // Na API; sem internet, no estoque salvo no aparelho.
+    private suspend fun buscarMedicamentos(texto: String): List<MedicamentoDto> = try {
+        ApiClient.api.buscarMedicamentos(texto)
+    } catch (e: IOException) {
+        semConexao = true
+        medicamentosDoCache(estoqueLocal.buscar(texto))
+    } catch (e: HttpException) {
+        emptyList()
     }
 
     fun selecionarMedicamento(m: MedicamentoDto) {
@@ -95,7 +134,21 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
     private fun carregarLotes() {
         val m = medicamento ?: return
         viewModelScope.launch {
-            lotes = runCatching { ApiClient.api.listarEstoque(m.id) }.getOrDefault(emptyList())
+            lotes = try {
+                val daApi = ApiClient.api.listarEstoque(m.id)
+                // Guarda a cópia mais recente dos lotes deste medicamento.
+                runCatching {
+                    estoqueLocal.limparMedicamento(m.id)
+                    estoqueLocal.salvarEstoque(daApi.map { it.paraLocal(System.currentTimeMillis()) })
+                }
+                semConexao = false
+                daApi
+            } catch (e: IOException) {
+                semConexao = true
+                estoqueLocal.listarPorMedicamento(m.id).map { it.paraDto(LocalDate.now()) }
+            } catch (e: HttpException) {
+                emptyList()
+            }
             ajustarLote()
         }
     }
@@ -134,19 +187,64 @@ class MovimentacaoViewModel(private val usuario: UsuarioDto) : ViewModel() {
             )
         }
 
+        // Toda movimentação ganha um id_local. Se a internet cair no meio do envio,
+        // o reenvio usa o mesmo id e a API não aplica a movimentação duas vezes.
+        val idLocal = UUID.randomUUID().toString()
+        val payload = json.encodeToString(req)
+        val descricao = "${tipo.rotulo} de $qtd un. de ${m.nome}"
+
         viewModelScope.launch {
             enviando = true
             try {
-                ApiClient.api.registrarMovimentacao(req)
-                mensagem = "${tipo.rotulo} de $qtd un. de ${m.nome} registrada com sucesso."
-                quantidade = ""; documento = ""; observacao = ""; novoLote = ""; validade = ""
-                carregarLotes()
+                val resultado = ApiClient.api.sincronizarMovimentacoes(
+                    LoteMovimentacoesRequest(listOf(Sincronizacao.itemDoLote(idLocal, payload)))
+                ).resultados.firstOrNull()
+                if (resultado?.status == "aceito") {
+                    mensagem = "$descricao registrada com sucesso."
+                    limparCampos()
+                    carregarLotes()
+                } else {
+                    erro = resultado?.mensagem ?: "A API recusou a movimentação."
+                }
             } catch (e: HttpException) {
                 erro = mensagemDeErro(e)
             } catch (e: IOException) {
-                erro = "Não foi possível conectar à API."
+                guardarParaEnviarDepois(idLocal, payload, req, descricao)
+                mensagem = "Sem internet: $descricao ficou salva no aparelho e será enviada quando a conexão voltar."
+                limparCampos()
+                carregarLotes()
             }
             enviando = false
         }
+    }
+
+    private suspend fun guardarParaEnviarDepois(
+        idLocal: String,
+        payload: String,
+        req: MovimentacaoRequest,
+        descricao: String,
+    ) {
+        pendentes.inserir(
+            MovimentacaoPendenteEntity(
+                idLocal = idLocal,
+                usuarioId = usuario.id,
+                payload = payload,
+                descricao = descricao,
+                criadaEm = System.currentTimeMillis(),
+            )
+        )
+        // Atualiza o saldo salvo, para as próximas validações offline (RN01) usarem o valor certo.
+        req.estoqueLoteId?.let { id ->
+            estoqueLocal.buscarPorChave(id.toString())?.let { local ->
+                estoqueLocal.salvarEstoque(
+                    listOf(local.copy(quantidade = saldoDepois(req.tipo, local.quantidade, req.quantidade)))
+                )
+            }
+        }
+        Sincronizacao.agendar(getApplication())
+    }
+
+    private fun limparCampos() {
+        quantidade = ""; documento = ""; observacao = ""; novoLote = ""; validade = ""
     }
 }

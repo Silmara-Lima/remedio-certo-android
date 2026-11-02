@@ -19,6 +19,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.remediocerto.core.ui.StatusBadge
 import br.com.remediocerto.core.ui.StatusEstoque
 import br.com.remediocerto.core.ui.dataBr
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +30,34 @@ fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
     // nas próximas, atualiza sem piscar (para refletir movimentações novas).
     LaunchedEffect(Unit) { vm.carregar(puxouParaAtualizar = vm.estado is EstoqueUiState.Sucesso) }
 
+    val pendentes by vm.pendentes.collectAsState()
+    val rejeitadas by vm.rejeitadas.collectAsState()
+
     Column(Modifier.fillMaxSize()) {
+        // ---------- Avisos do modo offline ----------
+        (vm.estado as? EstoqueUiState.Sucesso)?.salvoEm?.let { salvoEm ->
+            Aviso(
+                "Sem conexão. Mostrando o estoque salvo em ${horario(salvoEm)}.",
+                cor = MaterialTheme.colorScheme.tertiaryContainer,
+            )
+        }
+        if (pendentes > 0) {
+            Aviso(
+                "$pendentes movimentação(ões) feita(s) sem internet aguardando envio.",
+                cor = MaterialTheme.colorScheme.secondaryContainer,
+                botao = "Enviar agora",
+                onClick = vm::enviarAgora,
+            )
+        }
+        rejeitadas.forEach { r ->
+            Aviso(
+                "Recusada pela API: ${r.descricao}. Motivo: ${r.motivo ?: "não informado"}",
+                cor = MaterialTheme.colorScheme.errorContainer,
+                botao = "Dispensar",
+                onClick = { vm.dispensar(r.idLocal) },
+            )
+        }
+
         OutlinedTextField(
             value = vm.busca,
             onValueChange = { vm.busca = it },
@@ -114,6 +144,23 @@ private fun ItemEstoqueCard(item: ItemEstoque) {
         }
     }
 }
+
+@Composable
+private fun Aviso(texto: String, cor: androidx.compose.ui.graphics.Color, botao: String? = null, onClick: () -> Unit = {}) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = cor),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    ) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(texto, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+            if (botao != null) TextButton(onClick = onClick) { Text(botao) }
+        }
+    }
+}
+
+private fun horario(millis: Long): String =
+    Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm"))
 
 @Composable
 private fun MensagemCentral(texto: String, botao: String? = null, onClick: () -> Unit = {}) {

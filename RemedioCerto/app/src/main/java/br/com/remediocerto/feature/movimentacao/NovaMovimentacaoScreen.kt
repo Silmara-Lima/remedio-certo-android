@@ -1,5 +1,6 @@
 package br.com.remediocerto.feature.movimentacao
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -25,10 +26,11 @@ import br.com.remediocerto.core.ui.MascaraData
 
 @Composable
 fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
-    val vm: MovimentacaoViewModel = viewModel(factory = viewModelFactory {
-        initializer { MovimentacaoViewModel(usuario) }
-    })
     val context = LocalContext.current
+    val app = context.applicationContext as Application
+    val vm: MovimentacaoViewModel = viewModel(factory = viewModelFactory {
+        initializer { MovimentacaoViewModel(usuario, app) }
+    })
     val escanear = {
         iniciarScanner(context, onCodigo = { vm.processarCodigo(it) }, onErro = { vm.erro = it })
     }
@@ -46,6 +48,22 @@ fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Nova movimentação", style = MaterialTheme.typography.headlineSmall)
+
+        // Sem internet: avisa que está usando o estoque salvo e que o envio fica para depois.
+        if (vm.semConexao) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "Sem conexão. Usando o estoque salvo no aparelho; as movimentações " +
+                        "serão enviadas automaticamente quando a internet voltar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
 
         // Tipo
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

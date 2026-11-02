@@ -41,6 +41,8 @@ interface RemedioCertoApi {
 
     // ---------- Movimentações ----------
     @POST("movimentacoes") suspend fun registrarMovimentacao(@Body body: MovimentacaoRequest): MovimentacaoDto
+    // Envio com id_local: a API reconhece reenvios e nunca aplica a mesma movimentação duas vezes.
+    @POST("movimentacoes/lote") suspend fun sincronizarMovimentacoes(@Body body: LoteMovimentacoesRequest): LoteMovimentacoesResposta
     @GET("movimentacoes") suspend fun listarMovimentacoes(
         @Query("tipo") tipo: String? = null,
         @Query("limite") limite: Int = 100,
@@ -138,7 +140,7 @@ object ApiClient {
         synchronized(travaRenovacao) {
             val atual = token ?: return@Authenticator null               // usuário saiu
             val novo = if (atual != tokenUsado) atual                    // outra chamada já renovou
-            else renovarTokens() ?: return@Authenticator null
+                       else renovarTokens() ?: return@Authenticator null
             pedido.newBuilder().header("Authorization", "Bearer $novo").build()
         }
     }

@@ -1,4 +1,3 @@
-
 package br.com.remediocerto.core.database
 
 import android.content.Context
@@ -13,15 +12,15 @@ object DatabaseProvider {
 
         return INSTANCE ?: synchronized(this) {
 
-            val instance = Room.databaseBuilder(
+            INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "remedio_certo_db"
-            ).build()
-
-            INSTANCE = instance
-
-            instance
+            )
+                // A versão 1 nunca guardou dados; ao mudar a estrutura, recria as tabelas.
+                .fallbackToDestructiveMigration(true)
+                .build()
+                .also { INSTANCE = it }
         }
     }
 }

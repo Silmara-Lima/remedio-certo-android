@@ -3,6 +3,7 @@ package br.com.remediocerto
 import android.app.Application
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.ArmazenamentoTokens
+import br.com.remediocerto.core.offline.Sincronizacao
 import br.com.remediocerto.core.session.SessionManager
 import kotlinx.coroutines.runBlocking
 
@@ -22,5 +23,8 @@ class RemedioCertoApp : Application() {
                 runBlocking { sessao.atualizarTokens(accessToken, refreshToken) }
             }
         }
+
+        // Envia o que ficou na fila de movimentações offline assim que houver internet.
+        Sincronizacao.agendar(this)
     }
 }
