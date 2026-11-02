@@ -75,6 +75,10 @@ fun AlertasScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
+                                // Aviso fixo no topo da aba Ativos, antes do primeiro alerta.
+                                if (vm.aba == AbaAlerta.ATIVOS) {
+                                    item(key = "aviso-ativos") { AvisoAlertasAtivos() }
+                                }
                                 items(lista, key = { it.id }) { alerta ->
                                     AlertaCard(
                                         alerta = alerta,
@@ -95,16 +99,17 @@ fun AlertasScreen(
     vm.acaoPendente?.let { pendente ->
         AlertDialog(
             onDismissRequest = { vm.acaoPendente = null },
-            title = { Text(if (pendente.resolver) "Resolver alerta?" else "Ignorar alerta?") },
+            title = { Text(if (pendente.resolver) "Marcar como resolvido?" else "Ignorar alerta?") },
             text = {
                 Text(
-                    if (pendente.resolver) "Confirme que a situação já foi tratada. O alerta vai para a aba Resolvidos."
+                    if (pendente.resolver) "Confirme que a situação já foi tratada. O alerta vai para a aba Resolvidos. " +
+                            "Se o problema continuar, um novo alerta volta a aparecer em Ativos."
                     else "O alerta sai da lista de ativos e vai para a aba Ignorados."
                 )
             },
             confirmButton = {
                 TextButton(onClick = { vm.confirmarAcao() }) {
-                    Text(if (pendente.resolver) "Resolver" else "Ignorar")
+                    Text(if (pendente.resolver) "Marcar como resolvido" else "Ignorar")
                 }
             },
             dismissButton = { TextButton(onClick = { vm.acaoPendente = null }) { Text("Cancelar") } },
@@ -175,7 +180,7 @@ private fun AlertaCard(
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onResolver, enabled = habilitado) { Text("Resolver") }
+                        Button(onClick = onResolver, enabled = habilitado) { Text("Marcar como resolvido") }
                         OutlinedButton(onClick = onIgnorar, enabled = habilitado) { Text("Ignorar") }
                     }
                     TextButton(onClick = onRegistrarMovimentacao, enabled = habilitado) {
@@ -193,6 +198,24 @@ private fun AlertaCard(
                 }
             }
         }
+    }
+}
+
+/** Explica por que um alerta resolvido pode voltar: a API recria o alerta enquanto a causa continuar. */
+@Composable
+private fun AvisoAlertasAtivos() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            "O alerta é resolvido automaticamente quando a causa some: registre uma entrada " +
+                    "(estoque baixo) ou o descarte do lote (vencido). Se você marcar como resolvido " +
+                    "e o problema continuar, o alerta volta a aparecer.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }
 
