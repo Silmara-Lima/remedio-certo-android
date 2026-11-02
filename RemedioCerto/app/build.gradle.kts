@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -63,4 +64,10 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.play.services.code.scanner)
+    // Room - Banco de dados local
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+
+// WorkManager - Sincronização automática
+    implementation(libs.androidx.work.runtime)
 }
