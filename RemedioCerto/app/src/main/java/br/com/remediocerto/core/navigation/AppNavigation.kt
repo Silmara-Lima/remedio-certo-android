@@ -23,9 +23,14 @@ fun AppNavigation(usuarioInicial: UsuarioDto?) {
     var usuario by remember { mutableStateOf(usuarioInicial) }
     var avisoLogin by remember { mutableStateOf<String?>(null) }
 
-    fun encerrarSessao(aviso: String?) {
-        scope.launch { app.sessao.limpar() }
+    // avisarServidor = true no botão Sair: encerra a sessão também na API.
+    fun encerrarSessao(aviso: String?, avisarServidor: Boolean = false) {
+        val tokenAntigo = ApiClient.token
         ApiClient.token = null
+        scope.launch {
+            app.sessao.limpar()
+            if (avisarServidor && tokenAntigo != null) ApiClient.encerrarNoServidor(tokenAntigo)
+        }
         usuario = null
         avisoLogin = aviso
         nav.navigate("login") { popUpTo(0) { inclusive = true } }   // limpa toda a pilha de telas
@@ -54,7 +59,7 @@ fun AppNavigation(usuarioInicial: UsuarioDto?) {
             }
         }
         composable("principal") {
-            usuario?.let { u -> MainScreen(usuario = u, onSair = { encerrarSessao(null) }) }
+            usuario?.let { u -> MainScreen(usuario = u, onSair = { encerrarSessao(null, avisarServidor = true) }) }
         }
     }
 }

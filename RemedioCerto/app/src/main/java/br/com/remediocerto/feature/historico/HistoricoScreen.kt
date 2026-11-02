@@ -67,6 +67,7 @@ fun HistoricoScreen(onVoltar: () -> Unit, vm: HistoricoViewModel = viewModel()) 
                 FilterChip(selected = vm.filtroTipo == valor, onClick = { vm.selecionarTipo(valor) }, label = { Text(rotulo) })
             }
         }
+
         PullToRefreshBox(isRefreshing = vm.carregando, onRefresh = { vm.carregar() }, modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),

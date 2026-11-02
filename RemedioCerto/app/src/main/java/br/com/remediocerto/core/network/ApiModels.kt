@@ -2,6 +2,7 @@ package br.com.remediocerto.core.network
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 // ---------- Autenticação ----------
 @Serializable
@@ -28,7 +29,13 @@ data class TokenResponse(
     @SerialName("access_token") val accessToken: String,
     @SerialName("token_type") val tokenType: String = "bearer",
     val usuario: UsuarioDto,
+    // Vem do login e do /auth/refresh. Serve para pedir um access token novo sem novo login.
+    @SerialName("refresh_token") val refreshToken: String? = null,
+    @SerialName("expires_in") val expiraEmSegundos: Int? = null,
 )
+
+@Serializable
+data class RefreshRequest(@SerialName("refresh_token") val refreshToken: String)
 
 @Serializable
 data class UsuarioResumoDto(val id: Int, val nome: String)
@@ -120,6 +127,56 @@ data class EstoqueDto(
     val unidade: UnidadeDto? = null,
 )
 
+// ---------- Alertas ----------
+// Lote resumido que vem dentro do alerta. Tudo com valor padrão para a tela
+// não quebrar se a API mandar o lote incompleto.
+@Serializable
+data class AlertaLoteDto(
+    val id: Int,
+    val lote: String = "",
+    val validade: String = "",
+    val quantidade: Int = 0,
+    @SerialName("dias_para_vencer") val diasParaVencer: Int? = null,
+)
+
+@Serializable
+data class AlertaDto(
+    val id: Int,
+    val tipo: String,                                   // estoque_baixo | vencimento_proximo | vencido
+    val mensagem: String,
+    val status: String,                                 // ativo | resolvido | ignorado
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("gerado_em") val geradoEm: String,
+    @SerialName("resolvido_em") val resolvidoEm: String? = null,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+    @SerialName("estoque_lote") val estoqueLote: AlertaLoteDto? = null,
+)
+
+// ---------- Configuração de alertas (uma por unidade) ----------
+@Serializable
+data class ConfiguracaoAlertaDto(
+    val id: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("estoque_minimo_padrao") val estoqueMinimoPadrao: Int = 10,
+    @SerialName("dias_alerta_vencimento") val diasAlertaVencimento: Int = 30,
+    @SerialName("dias_alerta_critico") val diasAlertaCritico: Int = 7,
+    @SerialName("notificacao_email") val notificacaoEmail: Boolean = false,
+    @SerialName("notificacao_push") val notificacaoPush: Boolean = true,
+)
+
+// Serve para criar (POST) e para atualizar (PUT); na atualização a API ignora unidade_id.
+@Serializable
+data class ConfiguracaoAlertaRequest(
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("estoque_minimo_padrao") val estoqueMinimoPadrao: Int,
+    @SerialName("dias_alerta_vencimento") val diasAlertaVencimento: Int,
+    @SerialName("dias_alerta_critico") val diasAlertaCritico: Int,
+    @SerialName("notificacao_email") val notificacaoEmail: Boolean,
+    @SerialName("notificacao_push") val notificacaoPush: Boolean,
+)
+
 // ---------- Movimentações ----------
 @Serializable
 data class MovimentacaoRequest(
@@ -150,6 +207,23 @@ data class MovimentacaoDto(
     val medicamento: MedicamentoDto? = null,
     val unidade: UnidadeDto? = null,
 )
+
+// ---------- Envio em lote (movimentações feitas sem internet) ----------
+// Cada item é o JSON de uma MovimentacaoRequest mais o "id_local" (UUID).
+@Serializable
+data class LoteMovimentacoesRequest(val movimentacoes: List<JsonObject>)
+
+@Serializable
+data class ResultadoSyncDto(
+    @SerialName("id_local") val idLocal: String? = null,
+    val status: String,                                 // aceito | rejeitado
+    val repetida: Boolean = false,                      // a API já tinha recebido este id_local
+    val codigo: String? = null,
+    val mensagem: String? = null,
+)
+
+@Serializable
+data class LoteMovimentacoesResposta(val resultados: List<ResultadoSyncDto>)
 
 @Serializable
 data class HistoricoDto(
