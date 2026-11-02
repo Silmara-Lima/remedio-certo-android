@@ -189,19 +189,22 @@ fun RelatoriosScreen(
 
 // ---------- Compartilhar arquivo ----------
 
+
 fun notificarECompartilhar(
     context: Context,
     arquivo: File?,
     mimeType: String
 ) {
-    if (arquivo != null && arquivo.exists()) {
-
+    if (arquivo == null || !arquivo.exists()) {
         Toast.makeText(
             context,
-            "Arquivo gerado com sucesso!",
+            "Erro ao gerar o arquivo.",
             Toast.LENGTH_SHORT
         ).show()
+        return
+    }
 
+    try {
         val uri: Uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -221,12 +224,11 @@ fun notificarECompartilhar(
             )
         )
 
-    } else {
-
+    } catch (e: Exception) {
         Toast.makeText(
             context,
-            "Erro ao gerar o arquivo.",
-            Toast.LENGTH_SHORT
+            "Erro ao compartilhar: ${e.message}",
+            Toast.LENGTH_LONG
         ).show()
     }
 }
