@@ -25,6 +25,7 @@ import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentosScreen
 import br.com.remediocerto.feature.cadastros.unidades.UnidadeFormScreen
 import br.com.remediocerto.feature.cadastros.unidades.UnidadesScreen
+import br.com.remediocerto.feature.alertas.AlertasScreen
 import br.com.remediocerto.feature.dashboard.DashboardScreen
 import br.com.remediocerto.feature.estoque.EstoqueScreen
 import br.com.remediocerto.feature.historico.HistoricoScreen
@@ -81,7 +82,9 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
             }
             composable(Aba.ESTOQUE.rota) { EstoqueScreen() }
             composable(Aba.ESCANEAR.rota) { NovaMovimentacaoScreen(usuario, abrirScanner = true) }
-            composable(Aba.ALERTAS.rota) { TelaProvisoria("Alertas") }
+            composable(Aba.ALERTAS.rota) {
+                AlertasScreen(onRegistrarMovimentacao = { irParaAba(Aba.ESCANEAR.rota) })
+            }
             composable(Aba.MAIS.rota) {
                 MaisScreen(
                     usuario = usuario,

@@ -9,6 +9,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -58,6 +59,14 @@ interface RemedioCertoApi {
     @POST("unidades") suspend fun criarUnidade(@Body body: UnidadeRequest): UnidadeDto
     @PUT("unidades/{id}") suspend fun atualizarUnidade(@Path("id") id: Int, @Body body: UnidadeRequest): UnidadeDto
     @DELETE("unidades/{id}") suspend fun desativarUnidade(@Path("id") id: Int): MensagemDto
+
+    // ---------- Alertas ----------
+    // "gerar" pede para a API conferir o estoque e criar os alertas que faltam.
+    @POST("alertas/gerar") suspend fun gerarAlertas(): MensagemDto
+    @GET("alertas") suspend fun listarAlertas(@Query("status_alerta") status: String? = null): List<AlertaDto>
+    @GET("alertas/{id}") suspend fun buscarAlerta(@Path("id") id: Int): AlertaDto
+    @PATCH("alertas/{id}/resolver") suspend fun resolverAlerta(@Path("id") id: Int): AlertaDto
+    @PATCH("alertas/{id}/ignorar") suspend fun ignorarAlerta(@Path("id") id: Int): AlertaDto
 }
 
 object ApiClient {

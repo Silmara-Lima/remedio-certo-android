@@ -120,6 +120,33 @@ data class EstoqueDto(
     val unidade: UnidadeDto? = null,
 )
 
+// ---------- Alertas ----------
+// Lote resumido que vem dentro do alerta. Tudo com valor padrão para a tela
+// não quebrar se a API mandar o lote incompleto.
+@Serializable
+data class AlertaLoteDto(
+    val id: Int,
+    val lote: String = "",
+    val validade: String = "",
+    val quantidade: Int = 0,
+    @SerialName("dias_para_vencer") val diasParaVencer: Int? = null,
+)
+
+@Serializable
+data class AlertaDto(
+    val id: Int,
+    val tipo: String,                                   // estoque_baixo | vencimento_proximo | vencido
+    val mensagem: String,
+    val status: String,                                 // ativo | resolvido | ignorado
+    @SerialName("medicamento_id") val medicamentoId: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("gerado_em") val geradoEm: String,
+    @SerialName("resolvido_em") val resolvidoEm: String? = null,
+    val medicamento: MedicamentoDto? = null,
+    val unidade: UnidadeDto? = null,
+    @SerialName("estoque_lote") val estoqueLote: AlertaLoteDto? = null,
+)
+
 // ---------- Movimentações ----------
 @Serializable
 data class MovimentacaoRequest(
