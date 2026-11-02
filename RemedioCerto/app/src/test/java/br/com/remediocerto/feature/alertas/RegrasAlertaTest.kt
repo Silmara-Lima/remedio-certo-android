@@ -2,6 +2,7 @@ package br.com.remediocerto.feature.alertas
 
 import br.com.remediocerto.core.network.AlertaDto
 import br.com.remediocerto.core.network.AlertaLoteDto
+import br.com.remediocerto.core.network.ConfiguracaoAlertaDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -16,13 +17,14 @@ class RegrasAlertaTest {
         status: String = "ativo",
         dias: Int? = null,
         geradoEm: String = "2026-11-01T10:00:00",
+        unidadeId: Int = 1,
     ) = AlertaDto(
         id = id,
         tipo = tipo,
         mensagem = "teste",
         status = status,
         medicamentoId = 1,
-        unidadeId = 1,
+        unidadeId = unidadeId,
         geradoEm = geradoEm,
         estoqueLote = dias?.let { AlertaLoteDto(id = 10, lote = "L1", validade = "2026-12-01", quantidade = 5, diasParaVencer = it) },
     )
@@ -80,5 +82,52 @@ class RegrasAlertaTest {
         assertEquals(listOf(1), alertasDaAba(lista, AbaAlerta.ATIVOS).map { it.id })
         assertEquals(listOf(2), alertasDaAba(lista, AbaAlerta.RESOLVIDOS).map { it.id })
         assertEquals(listOf(3), alertasDaAba(lista, AbaAlerta.IGNORADOS).map { it.id })
+    }
+
+    @Test
+    fun `dias de critico configurados mudam o limite`() {
+        val aDezDias = alerta(1, "vencimento_proximo", dias = 10)
+        assertFalse(ehCritico(aDezDias))
+        assertTrue(ehCritico(aDezDias, diasCritico = 15))
+    }
+
+    @Test
+    fun `vencimento proximo sem lote nao e critico`() {
+        assertFalse(ehCritico(alerta(1, "vencimento_proximo")))
+    }
+
+    @Test
+    fun `mesma gravidade e prazo, o mais recente vem primeiro`() {
+        val lista = listOf(
+            alerta(1, "estoque_baixo", geradoEm = "2026-11-01T08:00:00"),
+            alerta(2, "estoque_baixo", geradoEm = "2026-11-02T08:00:00"),
+        )
+        assertEquals(listOf(2, 1), ordenarAlertas(lista).map { it.id })
+    }
+
+    @Test
+    fun `cada unidade usa os seus dias de critico`() {
+        val dias = diasCriticoPorUnidade(
+            listOf(
+                ConfiguracaoAlertaDto(id = 1, unidadeId = 1, diasAlertaCritico = 15),
+                ConfiguracaoAlertaDto(id = 2, unidadeId = 2, diasAlertaCritico = 5),
+            )
+        )
+        assertEquals(15, diasCriticoDo(alerta(1, "vencimento_proximo", unidadeId = 1), dias))
+        assertEquals(5, diasCriticoDo(alerta(2, "vencimento_proximo", unidadeId = 2), dias))
+        // Unidade sem configuração usa o padrão.
+        assertEquals(DIAS_CRITICO_PADRAO, diasCriticoDo(alerta(3, "vencimento_proximo", unidadeId = 9), dias))
+    }
+
+    @Test
+    fun `ordem usa os dias de critico da unidade`() {
+        // Vence em 10 dias: no padrão (7) não é crítico e fica depois do estoque baixo.
+        // Na unidade configurada com 15 dias vira crítico e sobe para o topo.
+        val lista = listOf(
+            alerta(1, "estoque_baixo", unidadeId = 1),
+            alerta(2, "vencimento_proximo", dias = 10, unidadeId = 1),
+        )
+        assertEquals(listOf(1, 2), ordenarAlertas(lista).map { it.id })
+        assertEquals(listOf(2, 1), ordenarAlertas(lista, mapOf(1 to 15)).map { it.id })
     }
 }

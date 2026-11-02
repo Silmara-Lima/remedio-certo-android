@@ -14,7 +14,11 @@ import java.io.IOException
 
 sealed interface AlertasUiState {
     data object Carregando : AlertasUiState
-    data class Sucesso(val alertas: List<AlertaDto>) : AlertasUiState
+    /** diasCritico: dias de crítico por unidade (unidadeId -> dias), da configuração de alertas. */
+    data class Sucesso(
+        val alertas: List<AlertaDto>,
+        val diasCritico: Map<Int, Int> = emptyMap(),
+    ) : AlertasUiState
     data class Erro(val mensagem: String) : AlertasUiState
 }
 
@@ -37,7 +41,10 @@ class AlertasViewModel : ViewModel() {
             // Pede para a API criar os alertas novos antes de listar.
             // Se falhar, segue com a lista que já existe.
             runCatching { ApiClient.api.gerarAlertas() }
-            AlertasUiState.Sucesso(ApiClient.api.listarAlertas())
+            val alertas = ApiClient.api.listarAlertas()
+            // Dias de crítico configurados por unidade. Se não vier, a tela usa o padrão (7).
+            val configuracoes = runCatching { ApiClient.api.listarConfiguracoesAlerta() }.getOrDefault(emptyList())
+            AlertasUiState.Sucesso(alertas, diasCriticoPorUnidade(configuracoes))
         } catch (e: HttpException) {
             AlertasUiState.Erro(mensagemDeErro(e))
         } catch (e: IOException) {

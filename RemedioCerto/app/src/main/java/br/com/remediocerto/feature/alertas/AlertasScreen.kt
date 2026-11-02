@@ -60,7 +60,7 @@ fun AlertasScreen(
                         MensagemCentral(estado.mensagem, botao = "Tentar novamente") { vm.carregar() }
 
                     is AlertasUiState.Sucesso -> {
-                        val lista = alertasDaAba(estado.alertas, vm.aba)
+                        val lista = alertasDaAba(estado.alertas, vm.aba, estado.diasCritico)
                         if (lista.isEmpty()) {
                             MensagemCentral(
                                 when (vm.aba) {
@@ -75,13 +75,10 @@ fun AlertasScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
-                                // Aviso fixo no topo da aba Ativos, antes do primeiro alerta.
-                                if (vm.aba == AbaAlerta.ATIVOS) {
-                                    item(key = "aviso-ativos") { AvisoAlertasAtivos() }
-                                }
                                 items(lista, key = { it.id }) { alerta ->
                                     AlertaCard(
                                         alerta = alerta,
+                                        diasCritico = diasCriticoDo(alerta, estado.diasCritico),
                                         habilitado = !vm.enviando,
                                         onResolver = { vm.acaoPendente = AcaoPendente(alerta, resolver = true) },
                                         onIgnorar = { vm.acaoPendente = AcaoPendente(alerta, resolver = false) },
@@ -102,8 +99,8 @@ fun AlertasScreen(
             title = { Text(if (pendente.resolver) "Marcar como resolvido?" else "Ignorar alerta?") },
             text = {
                 Text(
-                    if (pendente.resolver) "Confirme que a situação já foi tratada. O alerta vai para a aba Resolvidos. " +
-                            "Se o problema continuar, um novo alerta volta a aparecer em Ativos."
+                    if (pendente.resolver) "Confirme que a situação já foi tratada. O alerta vai para a aba Resolvidos " +
+                            "e só volta se a situação mudar de novo, por exemplo com uma nova saída."
                     else "O alerta sai da lista de ativos e vai para a aba Ignorados."
                 )
             },
@@ -120,13 +117,14 @@ fun AlertasScreen(
 @Composable
 private fun AlertaCard(
     alerta: AlertaDto,
+    diasCritico: Int,
     habilitado: Boolean,
     onResolver: () -> Unit,
     onIgnorar: () -> Unit,
     onRegistrarMovimentacao: () -> Unit,
 ) {
     val gravidade = gravidadeDo(alerta)
-    val critico = ehCritico(alerta)
+    val critico = ehCritico(alerta, diasCritico)
     val ativo = alerta.status == AbaAlerta.ATIVOS.api
 
     Card(Modifier.fillMaxWidth()) {
@@ -198,24 +196,6 @@ private fun AlertaCard(
                 }
             }
         }
-    }
-}
-
-/** Explica por que um alerta resolvido pode voltar: a API recria o alerta enquanto a causa continuar. */
-@Composable
-private fun AvisoAlertasAtivos() {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            "O alerta é resolvido automaticamente quando a causa some: registre uma entrada " +
-                    "(estoque baixo) ou o descarte do lote (vencido). Se você marcar como resolvido " +
-                    "e o problema continuar, o alerta volta a aparecer.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(12.dp),
-        )
     }
 }
 

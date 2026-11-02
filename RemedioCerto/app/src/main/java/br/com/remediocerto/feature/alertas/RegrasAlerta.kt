@@ -1,6 +1,7 @@
 package br.com.remediocerto.feature.alertas
 
 import br.com.remediocerto.core.network.AlertaDto
+import br.com.remediocerto.core.network.ConfiguracaoAlertaDto
 import br.com.remediocerto.core.ui.StatusEstoque
 
 // Regras da aba Alertas. Ficam fora do ViewModel para poder ser testadas sem a API.
@@ -14,6 +15,14 @@ enum class AbaAlerta(val api: String, val titulo: String) {
 
 /** Padrão do plano (RN05): alerta crítico a 7 dias do vencimento. */
 const val DIAS_CRITICO_PADRAO = 7
+
+/** Dias de crítico de cada unidade (unidadeId -> dias), vindos da configuração de alertas. */
+fun diasCriticoPorUnidade(configuracoes: List<ConfiguracaoAlertaDto>): Map<Int, Int> =
+    configuracoes.associate { it.unidadeId to it.diasAlertaCritico }
+
+/** Dias de crítico da unidade do alerta. Unidade sem configuração usa o padrão. */
+fun diasCriticoDo(alerta: AlertaDto, diasPorUnidade: Map<Int, Int>): Int =
+    diasPorUnidade[alerta.unidadeId] ?: DIAS_CRITICO_PADRAO
 
 /** Reaproveita as cores e rótulos do estoque: vencido, estoque baixo, vencendo. */
 fun gravidadeDo(alerta: AlertaDto): StatusEstoque = StatusEstoque.de(alerta.tipo)
@@ -45,13 +54,20 @@ fun textoPrazo(alerta: AlertaDto): String? {
 }
 
 /** Ordem da lista: mais grave primeiro; dentro da mesma gravidade, o que vence antes. */
-fun ordenarAlertas(alertas: List<AlertaDto>): List<AlertaDto> =
+fun ordenarAlertas(
+    alertas: List<AlertaDto>,
+    diasPorUnidade: Map<Int, Int> = emptyMap(),
+): List<AlertaDto> =
     alertas.sortedWith(
-        compareByDescending<AlertaDto> { ehCritico(it) }
+        compareByDescending<AlertaDto> { ehCritico(it, diasCriticoDo(it, diasPorUnidade)) }
             .thenByDescending { gravidadeDo(it).gravidade }
             .thenBy { it.estoqueLote?.diasParaVencer ?: Int.MAX_VALUE }
             .thenByDescending { it.geradoEm }
     )
 
-fun alertasDaAba(alertas: List<AlertaDto>, aba: AbaAlerta): List<AlertaDto> =
-    ordenarAlertas(alertas.filter { it.status == aba.api })
+fun alertasDaAba(
+    alertas: List<AlertaDto>,
+    aba: AbaAlerta,
+    diasPorUnidade: Map<Int, Int> = emptyMap(),
+): List<AlertaDto> =
+    ordenarAlertas(alertas.filter { it.status == aba.api }, diasPorUnidade)
