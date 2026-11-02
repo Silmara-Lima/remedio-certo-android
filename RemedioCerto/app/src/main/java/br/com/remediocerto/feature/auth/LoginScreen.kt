@@ -33,12 +33,13 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val r = ApiClient.api.login(LoginRequest(email.trim(), senha))
             ApiClient.token = r.accessToken
-            getApplication<RemedioCertoApp>().sessao.salvar(r.accessToken, r.usuario)
+            getApplication<RemedioCertoApp>().sessao.salvar(r.accessToken, r.usuario, r.refreshToken)
             usuarioLogado = r.usuario
         } catch (e: HttpException) {
             erro = when (e.code()) {
                 401 -> "E-mail ou senha inválidos."
                 422 -> "Verifique o formato do e-mail e preencha a senha."
+                429 -> "Muitas tentativas de login. Aguarde alguns minutos e tente de novo."
                 else -> "Erro ${e.code()} na API."
             }
         } catch (e: IOException) {

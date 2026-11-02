@@ -28,7 +28,13 @@ data class TokenResponse(
     @SerialName("access_token") val accessToken: String,
     @SerialName("token_type") val tokenType: String = "bearer",
     val usuario: UsuarioDto,
+    // Vem do login e do /auth/refresh. Serve para pedir um access token novo sem novo login.
+    @SerialName("refresh_token") val refreshToken: String? = null,
+    @SerialName("expires_in") val expiraEmSegundos: Int? = null,
 )
+
+@Serializable
+data class RefreshRequest(@SerialName("refresh_token") val refreshToken: String)
 
 @Serializable
 data class UsuarioResumoDto(val id: Int, val nome: String)

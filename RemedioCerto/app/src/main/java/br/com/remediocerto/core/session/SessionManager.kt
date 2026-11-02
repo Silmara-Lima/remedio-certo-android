@@ -15,14 +15,26 @@ private val Context.dataStore by preferencesDataStore(name = "sessao")
 class SessionManager(private val context: Context) {
     private val chaveToken = stringPreferencesKey("token")
     private val chaveUsuario = stringPreferencesKey("usuario")
+    private val chaveRefresh = stringPreferencesKey("refresh_token")
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun salvar(token: String, usuario: UsuarioDto) {
+    suspend fun salvar(token: String, usuario: UsuarioDto, refreshToken: String? = null) {
         context.dataStore.edit {
             it[chaveToken] = token
             it[chaveUsuario] = json.encodeToString(usuario)
+            if (refreshToken != null) it[chaveRefresh] = refreshToken else it.remove(chaveRefresh)
         }
     }
+
+    /** Depois de uma renovação: guarda o access token e o refresh token novos. */
+    suspend fun atualizarTokens(token: String, refreshToken: String) {
+        context.dataStore.edit {
+            it[chaveToken] = token
+            it[chaveRefresh] = refreshToken
+        }
+    }
+
+    suspend fun refreshToken(): String? = context.dataStore.data.first()[chaveRefresh]
 
     suspend fun carregar(): Pair<String, UsuarioDto>? {
         val prefs = context.dataStore.data.first()

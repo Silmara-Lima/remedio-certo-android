@@ -1,14 +1,17 @@
 package br.com.remediocerto.core.network
 
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -77,6 +80,21 @@ interface RemedioCertoApi {
     ): ConfiguracaoAlertaDto
 }
 
+/**
+ * Rotas de sessão chamadas por um cliente separado, sem renovação automática,
+ * para a renovação não chamar a si mesma.
+ */
+interface SessaoApi {
+    @POST("auth/refresh") fun renovar(@Body body: RefreshRequest): Call<TokenResponse>
+    @POST("auth/logout") suspend fun logout(@Header("Authorization") autorizacao: String): MensagemDto
+}
+
+/** Onde os tokens ficam guardados no aparelho (implementado em RemedioCertoApp com o SessionManager). */
+interface ArmazenamentoTokens {
+    fun lerRefreshToken(): String?
+    fun salvarTokens(accessToken: String, refreshToken: String)
+}
+
 object ApiClient {
     // Emulador com túnel (adb reverse tcp:8000 tcp:8000): http://127.0.0.1:8000/
     // Sem túnel, no emulador: http://10.0.2.2:8000/
@@ -85,12 +103,67 @@ object ApiClient {
 
     var token: String? = null
 
+    /** Definido no RemedioCertoApp. Sem ele, não há renovação e o 401 leva ao login. */
+    var armazenamento: ArmazenamentoTokens? = null
+
     // Vira true quando a API responde 401 numa chamada autenticada (token vencido ou inválido).
     private val _sessaoExpirada = MutableStateFlow(false)
     val sessaoExpirada: StateFlow<Boolean> = _sessaoExpirada
     fun reiniciarAvisoSessao() { _sessaoExpirada.value = false }
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val conversor = json.asConverterFactory("application/json".toMediaType())
+    private val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+
+    private val sessaoApi: SessaoApi = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .client(OkHttpClient.Builder().addInterceptor(log).build())
+        .addConverterFactory(conversor)
+        .build()
+        .create(SessaoApi::class.java)
+
+    private val travaRenovacao = Any()
+
+    private fun ehRotaDeSessao(caminho: String) =
+        caminho.endsWith("/auth/login") || caminho.endsWith("/auth/refresh") || caminho.endsWith("/auth/logout")
+
+    // Quando a API responde 401, tenta trocar o refresh token por um access token novo
+    // e repete a chamada uma vez. Se não der, devolve o 401 e o app volta ao login.
+    private val renovador = Authenticator { _, resposta ->
+        val pedido = resposta.request
+        if (ehRotaDeSessao(pedido.url.encodedPath)) return@Authenticator null
+        if (resposta.priorResponse != null) return@Authenticator null   // já tentou uma vez
+        val tokenUsado = pedido.header("Authorization")?.removePrefix("Bearer ")
+
+        synchronized(travaRenovacao) {
+            val atual = token ?: return@Authenticator null               // usuário saiu
+            val novo = if (atual != tokenUsado) atual                    // outra chamada já renovou
+            else renovarTokens() ?: return@Authenticator null
+            pedido.newBuilder().header("Authorization", "Bearer $novo").build()
+        }
+    }
+
+    /** Chama /auth/refresh. Devolve o access token novo ou null se o refresh token não vale mais. */
+    private fun renovarTokens(): String? {
+        val refresh = armazenamento?.lerRefreshToken() ?: return null
+        return try {
+            val r = sessaoApi.renovar(RefreshRequest(refresh)).execute()
+            val corpo = r.body()
+            val novoRefresh = corpo?.refreshToken
+            if (!r.isSuccessful || corpo == null || novoRefresh == null) return null
+            if (token == null) return null   // o usuário saiu enquanto a renovação estava em andamento
+            token = corpo.accessToken
+            armazenamento?.salvarTokens(corpo.accessToken, novoRefresh)
+            corpo.accessToken
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Encerra a sessão também no servidor (botão Sair). Falha em silêncio: o app sai de qualquer jeito. */
+    suspend fun encerrarNoServidor(accessToken: String) {
+        runCatching { sessaoApi.logout("Bearer $accessToken") }
+    }
 
     private val http = OkHttpClient.Builder()
         .addInterceptor { chain ->
@@ -104,13 +177,14 @@ object ApiClient {
             }
             resposta
         }
-        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+        .authenticator(renovador)
+        .addInterceptor(log)
         .build()
 
     val api: RemedioCertoApi = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(http)
-        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .addConverterFactory(conversor)
         .build()
         .create(RemedioCertoApi::class.java)
 }
