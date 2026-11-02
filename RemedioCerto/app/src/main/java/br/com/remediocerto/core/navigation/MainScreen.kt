@@ -26,6 +26,7 @@ import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentosScreen
 import br.com.remediocerto.feature.cadastros.unidades.UnidadeFormScreen
 import br.com.remediocerto.feature.cadastros.unidades.UnidadesScreen
 import br.com.remediocerto.feature.alertas.AlertasScreen
+import br.com.remediocerto.feature.alertas.configuracao.ConfiguracaoAlertasScreen
 import br.com.remediocerto.feature.dashboard.DashboardScreen
 import br.com.remediocerto.feature.estoque.EstoqueScreen
 import br.com.remediocerto.feature.historico.HistoricoScreen
@@ -94,8 +95,12 @@ fun MainScreen(usuario: UsuarioDto, onSair: () -> Unit) {
                     onUnidades = { nav.navigate("unidades") },
                     onUsuarios = { nav.navigate("usuarios") },
                     onTrocarSenha = { nav.navigate("trocar-senha") },
+                    onConfigAlertas = { nav.navigate("config-alertas") },
                 )
             }
+
+            // ---------- Configuração de alertas (Administrador) ----------
+            composable("config-alertas") { ConfiguracaoAlertasScreen(onVoltar = { nav.popBackStack() }) }
 
             // ---------- Histórico ----------
             composable("historico") { HistoricoScreen(onVoltar = { nav.popBackStack() }) }
@@ -167,6 +172,7 @@ fun MaisScreen(
     onUnidades: () -> Unit,
     onUsuarios: () -> Unit,
     onTrocarSenha: () -> Unit,
+    onConfigAlertas: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -185,6 +191,8 @@ fun MaisScreen(
             OutlinedButton(onClick = onMedicamentos, modifier = Modifier.fillMaxWidth()) { Text("Medicamentos") }
             OutlinedButton(onClick = onUnidades, modifier = Modifier.fillMaxWidth()) { Text("Unidades de saúde") }
             OutlinedButton(onClick = onUsuarios, modifier = Modifier.fillMaxWidth()) { Text("Usuários") }
+            Text("Alertas", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            OutlinedButton(onClick = onConfigAlertas, modifier = Modifier.fillMaxWidth()) { Text("Configuração de alertas") }
         }
 
         Spacer(Modifier.height(12.dp))
