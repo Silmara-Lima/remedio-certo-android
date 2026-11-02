@@ -67,6 +67,14 @@ interface RemedioCertoApi {
     @GET("alertas/{id}") suspend fun buscarAlerta(@Path("id") id: Int): AlertaDto
     @PATCH("alertas/{id}/resolver") suspend fun resolverAlerta(@Path("id") id: Int): AlertaDto
     @PATCH("alertas/{id}/ignorar") suspend fun ignorarAlerta(@Path("id") id: Int): AlertaDto
+
+    // ---------- Configuração de alertas ----------
+    @GET("configuracoes-alerta") suspend fun listarConfiguracoesAlerta(): List<ConfiguracaoAlertaDto>
+    @POST("configuracoes-alerta") suspend fun criarConfiguracaoAlerta(@Body body: ConfiguracaoAlertaRequest): ConfiguracaoAlertaDto
+    @PUT("configuracoes-alerta/{id}") suspend fun atualizarConfiguracaoAlerta(
+        @Path("id") id: Int,
+        @Body body: ConfiguracaoAlertaRequest,
+    ): ConfiguracaoAlertaDto
 }
 
 object ApiClient {

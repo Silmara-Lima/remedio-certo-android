@@ -147,6 +147,29 @@ data class AlertaDto(
     @SerialName("estoque_lote") val estoqueLote: AlertaLoteDto? = null,
 )
 
+// ---------- Configuração de alertas (uma por unidade) ----------
+@Serializable
+data class ConfiguracaoAlertaDto(
+    val id: Int,
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("estoque_minimo_padrao") val estoqueMinimoPadrao: Int = 10,
+    @SerialName("dias_alerta_vencimento") val diasAlertaVencimento: Int = 30,
+    @SerialName("dias_alerta_critico") val diasAlertaCritico: Int = 7,
+    @SerialName("notificacao_email") val notificacaoEmail: Boolean = false,
+    @SerialName("notificacao_push") val notificacaoPush: Boolean = true,
+)
+
+// Serve para criar (POST) e para atualizar (PUT); na atualização a API ignora unidade_id.
+@Serializable
+data class ConfiguracaoAlertaRequest(
+    @SerialName("unidade_id") val unidadeId: Int,
+    @SerialName("estoque_minimo_padrao") val estoqueMinimoPadrao: Int,
+    @SerialName("dias_alerta_vencimento") val diasAlertaVencimento: Int,
+    @SerialName("dias_alerta_critico") val diasAlertaCritico: Int,
+    @SerialName("notificacao_email") val notificacaoEmail: Boolean,
+    @SerialName("notificacao_push") val notificacaoPush: Boolean,
+)
+
 // ---------- Movimentações ----------
 @Serializable
 data class MovimentacaoRequest(
