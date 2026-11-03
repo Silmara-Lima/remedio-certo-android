@@ -1,21 +1,21 @@
 # Deploy da API
 
-A API fica em `backend/`, importada do backend existente de [LCCavadinha/remedio-certo-app, referência 968b3eb](https://github.com/LCCavadinha/remedio-certo-app/tree/968b3eb/remedio_certo_backend/remedio_certo_fastapi_mysql). O deploy deve usar esta cópia atualizada no repositório Android. Não há necessidade de copiar ou publicar o frontend web de origem.
+A API fica na pasta `backend/` deste repositório e é publicada a partir dela, com o `Dockerfile` e o [`render.yaml`](../render.yaml) da raiz.
 
 ## Configuração
 
-| Variável | Uso |
-| --- | --- |
-| `ENVIRONMENT` | `production` no ambiente publicado; desenvolvimento local usa a configuração do `.env.example`. |
-| `SECRET_KEY` | Segredo próprio do JWT; o Blueprint gera um valor aleatório. Não reutilizar o valor de exemplo. |
-| `DATABASE_URL` | PostgreSQL publicado; SQLite local; MySQL continua disponível no backend herdado. Nunca usar um arquivo SQLite efêmero como banco de nuvem. |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15`. |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7`. |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Envio de recuperação de senha por HTTPS, com remetente autorizado no provedor. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS` | Alternativa SMTP em hospedagem que permita tráfego nessas portas. |
-| `FIREBASE_CREDENTIALS_JSON` | JSON da conta de serviço do projeto Firebase correto, armazenado como segredo. Nunca versionar esse arquivo. |
-| `ALERTS_ENABLED`, `ALERTS_INTERVAL_SECONDS` | Habilitação e intervalo do agendador; o exemplo usa `true` e `60`. |
-| `TIMEZONE` | `America/Sao_Paulo`. |
+| Variável                                                                                 | Uso                                                                                                                     |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `ENVIRONMENT`                                                                            | `production` no ambiente publicado; desenvolvimento local usa a configuração do `.env.example`.                         |
+| `SECRET_KEY`                                                                             | Segredo próprio do JWT; o Blueprint gera um valor aleatório. Não reutilizar o valor de exemplo.                         |
+| `DATABASE_URL`                                                                           | PostgreSQL publicado; SQLite local; MySQL também é suportado. Nunca usar um arquivo SQLite efêmero como banco de nuvem. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES`                                                            | `15`.                                                                                                                   |
+| `REFRESH_TOKEN_EXPIRE_DAYS`                                                              | `7`.                                                                                                                    |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                                           | Envio de recuperação de senha por HTTPS, com remetente autorizado no provedor.                                          |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS` | Alternativa SMTP em hospedagem que permita tráfego nessas portas.                                                       |
+| `FIREBASE_CREDENTIALS_JSON`                                                              | JSON da conta de serviço do projeto Firebase correto, armazenado como segredo. Nunca versionar esse arquivo.            |
+| `ALERTS_ENABLED`, `ALERTS_INTERVAL_SECONDS`                                              | Habilitação e intervalo do agendador; o exemplo usa `true` e `60`.                                                      |
+| `TIMEZONE`                                                                               | `America/Sao_Paulo`.                                                                                                    |
 
 O `.env.example` e o código de configuração do backend são a referência dos valores opcionais e padrões. O código não precisa de credenciais externas para executar os testes automatizados com serviços simulados.
 
