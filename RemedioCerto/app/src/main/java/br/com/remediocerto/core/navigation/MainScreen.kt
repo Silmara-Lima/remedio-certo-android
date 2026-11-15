@@ -1,6 +1,7 @@
 package br.com.remediocerto.core.navigation
 
 import android.Manifest
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -193,7 +194,11 @@ fun MainScreen(
 
                 NovaMovimentacaoScreen(
                     usuario,
-                    abrirScanner = true
+                    abrirScanner = true,
+                    // Código não cadastrado: o administrador cadastra na hora (RF09 / Fluxo D)
+                    onCadastrarMedicamento = { codigo ->
+                        nav.navigate("medicamento-novo?codigo=${Uri.encode(codigo)}")
+                    }
                 )
             }
 
@@ -308,10 +313,20 @@ fun MainScreen(
                 )
             }
 
-            composable("medicamento-novo") {
+            composable(
+                "medicamento-novo?codigo={codigo}",
+                arguments = listOf(
+                    navArgument("codigo") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { e ->
 
                 MedicamentoFormScreen(
                     id = null,
+                    codigoInicial = e.arguments?.getString("codigo"),
                     onConcluido = {
                         nav.popBackStack()
                     }

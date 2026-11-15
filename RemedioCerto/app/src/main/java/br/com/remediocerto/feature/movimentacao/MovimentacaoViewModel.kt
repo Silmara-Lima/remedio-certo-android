@@ -68,6 +68,9 @@ class MovimentacaoViewModel(
     /** true quando os dados vieram do estoque salvo no aparelho (sem internet). */
     var semConexao by mutableStateOf(false); private set
 
+    /** Código lido ou digitado que não corresponde a nenhum medicamento (RF09). */
+    var codigoNaoEncontrado by mutableStateOf<String?>(null); private set
+
     private var buscaJob: Job? = null
 
     init {
@@ -95,15 +98,27 @@ class MovimentacaoViewModel(
 
     fun processarCodigo(codigo: String) = viewModelScope.launch {
         erro = null
-        val achados = buscarMedicamentos(codigo)
-        val m = achados.firstOrNull { it.codigoBarras == codigo } ?: achados.firstOrNull()
-        if (m != null) selecionarMedicamento(m)
-        else erro = "Nenhum medicamento cadastrado com o código $codigo."
+        val limpo = codigo.trim()
+        if (limpo.isEmpty()) return@launch
+        // Só aceita o código exato: um código parecido abriria o medicamento errado.
+        val m = buscarMedicamentos(limpo).firstOrNull { it.codigoBarras == limpo }
+        if (m != null) {
+            codigoNaoEncontrado = null
+            selecionarMedicamento(m)
+        } else {
+            codigoNaoEncontrado = limpo
+            erro = mensagemCodigoNaoEncontrado(limpo, isAdmin, semConexao)
+        }
+    }
+
+    /** Depois de cadastrar o medicamento, ao voltar para esta tela, tenta o mesmo código de novo. */
+    fun tentarCodigoPendente() {
+        codigoNaoEncontrado?.let { processarCodigo(it) }
     }
 
     // Na API; sem internet, no estoque salvo no aparelho.
     private suspend fun buscarMedicamentos(texto: String): List<MedicamentoDto> = try {
-        ApiClient.api.buscarMedicamentos(texto)
+        ApiClient.api.buscarMedicamentos(texto).also { semConexao = false }
     } catch (e: IOException) {
         semConexao = true
         medicamentosDoCache(estoqueLocal.buscar(texto))
@@ -251,3 +266,17 @@ class MovimentacaoViewModel(
         quantidade = ""; documento = ""; observacao = ""; novoLote = ""; validade = ""
     }
 }
+
+/**
+ * Mensagem quando o código não é de nenhum medicamento (RF09).
+ * O administrador pode cadastrar na hora; o funcionário é orientado a pedir o cadastro.
+ */
+fun mensagemCodigoNaoEncontrado(codigo: String, isAdmin: Boolean, semConexao: Boolean): String = when {
+    semConexao -> "O código $codigo não está no estoque salvo no aparelho. Para cadastrar um medicamento novo, conecte-se à internet."
+    isAdmin -> "Nenhum medicamento cadastrado com o código $codigo. Você pode cadastrá-lo agora."
+    else -> "Nenhum medicamento cadastrado com o código $codigo. Peça ao administrador para cadastrá-lo."
+}
+
+/** O botão "Cadastrar medicamento" só aparece para o administrador e com internet. */
+fun podeCadastrarPeloCodigo(codigo: String?, isAdmin: Boolean, semConexao: Boolean): Boolean =
+    codigo != null && isAdmin && !semConexao

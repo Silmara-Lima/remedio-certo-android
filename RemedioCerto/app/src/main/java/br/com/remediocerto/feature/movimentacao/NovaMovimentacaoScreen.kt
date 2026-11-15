@@ -25,7 +25,11 @@ import java.time.format.DateTimeFormatter
 import br.com.remediocerto.core.ui.MascaraData
 
 @Composable
-fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
+fun NovaMovimentacaoScreen(
+    usuario: UsuarioDto,
+    abrirScanner: Boolean = false,
+    onCadastrarMedicamento: (codigo: String) -> Unit = {},
+) {
     val context = LocalContext.current
     val app = context.applicationContext as Application
     val vm: MovimentacaoViewModel = viewModel(factory = viewModelFactory {
@@ -35,11 +39,16 @@ fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
         iniciarScanner(context, onCodigo = { vm.processarCodigo(it) }, onErro = { vm.erro = it })
     }
 
+    var digitarCodigo by remember { mutableStateOf(false) }
+
     // Na aba "Escanear", a câmera abre sozinha na primeira vez.
+    // Ao voltar do cadastro de um medicamento novo, tenta de novo o código que não existia.
     LaunchedEffect(Unit) {
         if (abrirScanner && !vm.jaAbriuScanner && vm.medicamento == null) {
             vm.jaAbriuScanner = true
             escanear()
+        } else {
+            vm.tentarCodigoPendente()
         }
     }
 
@@ -88,8 +97,21 @@ fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
                     modifier = Modifier.clickable { vm.selecionarMedicamento(s) },
                 )
             }
-            OutlinedButton(onClick = escanear, modifier = Modifier.fillMaxWidth()) {
-                Text("Escanear código de barras")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = escanear, modifier = Modifier.weight(1f)) {
+                    Text("Escanear código")
+                }
+                // Embalagem danificada ou câmera sem foco: o código pode ser digitado.
+                OutlinedButton(onClick = { digitarCodigo = true }, modifier = Modifier.weight(1f)) {
+                    Text("Digitar código")
+                }
+            }
+            vm.codigoNaoEncontrado?.let { codigo ->
+                if (podeCadastrarPeloCodigo(codigo, vm.isAdmin, vm.semConexao)) {
+                    Button(onClick = { onCadastrarMedicamento(codigo) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Cadastrar medicamento com o código $codigo")
+                    }
+                }
             }
         } else {
             Card(Modifier.fillMaxWidth()) {
@@ -173,6 +195,30 @@ fun NovaMovimentacaoScreen(usuario: UsuarioDto, abrirScanner: Boolean = false) {
         ) {
             Text(if (vm.enviando) "Registrando..." else "Confirmar ${vm.tipo.rotulo.lowercase()}")
         }
+    }
+
+    if (digitarCodigo) {
+        var codigo by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { digitarCodigo = false },
+            title = { Text("Digitar código de barras") },
+            text = {
+                OutlinedTextField(
+                    value = codigo,
+                    onValueChange = { codigo = it.filter(Char::isDigit).take(20) },
+                    label = { Text("Código (só números)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { digitarCodigo = false; vm.processarCodigo(codigo) },
+                    enabled = codigo.isNotBlank(),
+                ) { Text("Buscar") }
+            },
+            dismissButton = { TextButton(onClick = { digitarCodigo = false }) { Text("Cancelar") } },
+        )
     }
 }
 
