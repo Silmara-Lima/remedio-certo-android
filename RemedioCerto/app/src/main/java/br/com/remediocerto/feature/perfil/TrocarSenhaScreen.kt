@@ -2,7 +2,6 @@ package br.com.remediocerto.feature.perfil
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -10,9 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.TrocarSenhaRequest
 import br.com.remediocerto.core.network.mensagemDeErro
+import br.com.remediocerto.core.ui.CampoSenha
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -59,9 +56,6 @@ class TrocarSenhaViewModel : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrocarSenhaScreen(onVoltar: () -> Unit, vm: TrocarSenhaViewModel = viewModel()) {
-    var mostrar by remember { mutableStateOf(false) }
-    val transformacao = if (mostrar) VisualTransformation.None else PasswordVisualTransformation()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -78,22 +72,9 @@ fun TrocarSenhaScreen(onVoltar: () -> Unit, vm: TrocarSenhaViewModel = viewModel
             Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            listOf(
-                Triple("Senha atual", vm.atual) { v: String -> vm.atual = v },
-                Triple("Nova senha (mínimo 6 caracteres)", vm.nova) { v: String -> vm.nova = v },
-                Triple("Confirmar nova senha", vm.confirmacao) { v: String -> vm.confirmacao = v },
-            ).forEach { (rotulo, valor, onChange) ->
-                OutlinedTextField(
-                    value = valor, onValueChange = onChange, label = { Text(rotulo) }, singleLine = true,
-                    visualTransformation = transformacao,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Checkbox(checked = mostrar, onCheckedChange = { mostrar = it })
-                Text("Mostrar senhas")
-            }
+            CampoSenha(valor = vm.atual, onValorChange = { vm.atual = it }, rotulo = "Senha atual")
+            CampoSenha(valor = vm.nova, onValorChange = { vm.nova = it }, rotulo = "Nova senha (mínimo 6 caracteres)")
+            CampoSenha(valor = vm.confirmacao, onValorChange = { vm.confirmacao = it }, rotulo = "Confirmar nova senha")
 
             vm.erro?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (vm.sucesso) Text("Senha alterada com sucesso.", color = Color(0xFF15803D))
