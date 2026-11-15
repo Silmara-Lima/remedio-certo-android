@@ -43,6 +43,7 @@ import br.com.remediocerto.feature.alertas.AlertasScreen
 import br.com.remediocerto.feature.alertas.configuracao.ConfiguracaoAlertasScreen
 import br.com.remediocerto.feature.dashboard.DashboardScreen
 import br.com.remediocerto.feature.estoque.EstoqueScreen
+import br.com.remediocerto.feature.estoque.MedicamentoDetalheScreen
 import br.com.remediocerto.feature.historico.HistoricoScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
@@ -223,7 +224,34 @@ fun MainScreen(
             // ---------- Estoque ----------
 
             composable(Aba.ESTOQUE.rota) {
-                EstoqueScreen()
+                EstoqueScreen(
+                    onAbrirMedicamento = { medicamentoId, unidadeId ->
+                        nav.navigate("medicamento-detalhe/$medicamentoId/$unidadeId")
+                    }
+                )
+            }
+
+            // ---------- Detalhe do medicamento (T07) ----------
+
+            composable(
+                "medicamento-detalhe/{medicamentoId}/{unidadeId}",
+                arguments = listOf(
+                    navArgument("medicamentoId") { type = NavType.IntType },
+                    navArgument("unidadeId") { type = NavType.IntType },
+                )
+            ) { e ->
+
+                MedicamentoDetalheScreen(
+                    medicamentoId = e.arguments?.getInt("medicamentoId") ?: 0,
+                    unidadeId = e.arguments?.getInt("unidadeId") ?: 0,
+                    isAdmin = usuario.tipo == "ADMIN",
+                    onVoltar = {
+                        nav.popBackStack()
+                    },
+                    onEditar = { id ->
+                        nav.navigate("medicamento/$id")
+                    }
+                )
             }
 
             // ---------- Escanear ----------
