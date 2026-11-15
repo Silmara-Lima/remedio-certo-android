@@ -178,6 +178,10 @@ fun MainScreen(
 
                     onNovaMovimentacao = {
                         irParaAba(Aba.ESCANEAR.rota)
+                    },
+
+                    onVerAlertas = {
+                        irParaAba(Aba.ALERTAS.rota)
                     }
                 )
             }
