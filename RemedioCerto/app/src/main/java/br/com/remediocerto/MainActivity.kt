@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import br.com.remediocerto.core.navigation.AppNavigation
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.ui.theme.RemedioCertoTheme
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import kotlinx.coroutines.runBlocking
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,9 @@ class MainActivity : ComponentActivity() {
     private var destino by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // T01: a splash fica na tela enquanto a sessão salva é lida (logo abaixo);
+        // depois o app segue para o login, o desbloqueio por biometria ou o Início.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) destino = intent?.getStringExtra(Notificacoes.EXTRA_ABRIR)
         enableEdgeToEdge()

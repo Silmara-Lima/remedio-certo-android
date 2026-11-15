@@ -70,4 +70,7 @@ dependencies {
 
 // WorkManager - Sincronização automática
     implementation(libs.androidx.work.runtime)
+
+    // Splash screen (T01)
+    implementation(libs.androidx.core.splashscreen)
 }
