@@ -28,6 +28,7 @@ def listar_alertas(
         joinedload(Alerta.unidade),
         joinedload(Alerta.estoque_lote).joinedload(EstoqueLote.medicamento),
         joinedload(Alerta.estoque_lote).joinedload(EstoqueLote.unidade),
+        joinedload(Alerta.resolvido_por),
     )
 
     if usuario.perfil == PerfilUsuario.funcionario:
@@ -105,6 +106,7 @@ def buscar_alerta(
             joinedload(Alerta.unidade),
             joinedload(Alerta.estoque_lote).joinedload(EstoqueLote.medicamento),
             joinedload(Alerta.estoque_lote).joinedload(EstoqueLote.unidade),
+            joinedload(Alerta.resolvido_por),
         )
         .filter(Alerta.id == alerta_id)
         .first()
@@ -128,8 +130,10 @@ def atualizar_alerta(
 
     if data.status in (StatusAlerta.resolvido, StatusAlerta.ignorado) and alerta.resolvido_em is None:
         alerta.resolvido_em = datetime.now()
+        alerta.resolvido_por_id = admin.id
     if data.status == StatusAlerta.ativo:
         alerta.resolvido_em = None
+        alerta.resolvido_por_id = None
 
     return salvar(db, alerta)
 
@@ -146,6 +150,7 @@ def resolver_alerta(
 
     alerta.status = StatusAlerta.resolvido
     alerta.resolvido_em = datetime.now()
+    alerta.resolvido_por_id = usuario.id
     return salvar(db, alerta)
 
 
@@ -161,6 +166,7 @@ def ignorar_alerta(
 
     alerta.status = StatusAlerta.ignorado
     alerta.resolvido_em = datetime.now()
+    alerta.resolvido_por_id = usuario.id
     return salvar(db, alerta)
 
 

@@ -149,6 +149,7 @@ data class AlertaDto(
     @SerialName("unidade_id") val unidadeId: Int,
     @SerialName("gerado_em") val geradoEm: String,
     @SerialName("resolvido_em") val resolvidoEm: String? = null,
+    @SerialName("resolvido_por") val resolvidoPor: UsuarioResumoDto? = null,   // quem resolveu ou ignorou (RF14)
     val medicamento: MedicamentoDto? = null,
     val unidade: UnidadeDto? = null,
     @SerialName("estoque_lote") val estoqueLote: AlertaLoteDto? = null,

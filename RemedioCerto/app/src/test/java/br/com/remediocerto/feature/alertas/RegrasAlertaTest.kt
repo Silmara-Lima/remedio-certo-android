@@ -3,6 +3,7 @@ package br.com.remediocerto.feature.alertas
 import br.com.remediocerto.core.network.AlertaDto
 import br.com.remediocerto.core.network.AlertaLoteDto
 import br.com.remediocerto.core.network.ConfiguracaoAlertaDto
+import br.com.remediocerto.core.network.UsuarioResumoDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -129,5 +130,28 @@ class RegrasAlertaTest {
         )
         assertEquals(listOf(1, 2), ordenarAlertas(lista).map { it.id })
         assertEquals(listOf(2, 1), ordenarAlertas(lista, mapOf(1 to 15)).map { it.id })
+    }
+
+    @Test
+    fun `resolvido mostra quem resolveu (RF14)`() {
+        val a = alerta(1, "estoque_baixo").copy(
+            status = "resolvido",
+            resolvidoEm = "2026-11-15T14:10:00",
+            resolvidoPor = UsuarioResumoDto(id = 2, nome = "Maria Silva"),
+        )
+        val texto = textoResolucao(a)!!
+        assertTrue(texto.startsWith("Resolvido por Maria Silva em "))
+    }
+
+    @Test
+    fun `ignorado sem responsavel nao mostra nome`() {
+        val a = alerta(1, "vencido", status = "ignorado").copy(resolvidoEm = "2026-11-15T14:10:00")
+        val texto = textoResolucao(a)!!
+        assertTrue(texto.startsWith("Ignorado em "))
+    }
+
+    @Test
+    fun `alerta ativo nao tem texto de resolucao`() {
+        assertNull(textoResolucao(alerta(1, "estoque_baixo")))
     }
 }
