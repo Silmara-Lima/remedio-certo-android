@@ -25,7 +25,10 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
+fun EstoqueScreen(
+    onAbrirMedicamento: (medicamentoId: Int, unidadeId: Int) -> Unit = { _, _ -> },
+    vm: EstoqueViewModel = viewModel(),
+) {
     // Carrega ao abrir a aba. Na 1ª vez mostra o indicador central;
     // nas próximas, atualiza sem piscar (para refletir movimentações novas).
     LaunchedEffect(Unit) { vm.carregar(puxouParaAtualizar = vm.estado is EstoqueUiState.Sucesso) }
@@ -101,7 +104,11 @@ fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            items(itens, key = { it.chave }) { ItemEstoqueCard(it) }
+                            items(itens, key = { it.chave }) { item ->
+                                ItemEstoqueCard(item) {
+                                    item.lotes.firstOrNull()?.let { onAbrirMedicamento(it.medicamentoId, it.unidadeId) }
+                                }
+                            }
                         }
                     }
                 }
@@ -111,9 +118,10 @@ fun EstoqueScreen(vm: EstoqueViewModel = viewModel()) {
 }
 
 @Composable
-private fun ItemEstoqueCard(item: ItemEstoque) {
+private fun ItemEstoqueCard(item: ItemEstoque, onAbrir: () -> Unit) {
+    // Toque abre o detalhe do medicamento (T07); o botão de lotes mostra um resumo rápido aqui mesmo.
     var expandido by remember { mutableStateOf(false) }
-    Card(onClick = { expandido = !expandido }, modifier = Modifier.fillMaxWidth()) {
+    Card(onClick = onAbrir, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(6.dp).fillMaxHeight().background(item.status.cor))
             Column(Modifier.weight(1f).padding(16.dp)) {
@@ -125,10 +133,16 @@ private fun ItemEstoqueCard(item: ItemEstoque) {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    "Saldo: ${item.total} un. · mínimo ${item.minimo} · ${item.lotes.size} lote(s)",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Saldo: ${item.total} un. · mínimo ${item.minimo} · ${item.lotes.size} lote(s)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { expandido = !expandido }) {
+                        Text(if (expandido) "Ocultar lotes" else "Ver lotes")
+                    }
+                }
                 if (expandido) {
                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     item.lotes.forEach { lote ->
