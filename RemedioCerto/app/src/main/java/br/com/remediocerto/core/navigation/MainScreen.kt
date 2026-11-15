@@ -32,6 +32,7 @@ import androidx.navigation.navArgument
 
 import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.core.notificacao.Notificacoes
+import br.com.remediocerto.core.seguranca.Biometria
 
 import br.com.remediocerto.feature.RelatoriosScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
@@ -46,6 +47,7 @@ import br.com.remediocerto.feature.historico.HistoricoScreen
 import br.com.remediocerto.feature.movimentacao.NovaMovimentacaoScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
+import br.com.remediocerto.feature.perfil.PerfilScreen
 import br.com.remediocerto.feature.perfil.TrocarSenhaScreen
 
 // ---------- Abas principais ----------
@@ -70,6 +72,8 @@ fun MainScreen(
     onSair: () -> Unit,
     abrirAlertas: Boolean = false,          // true quando o app abriu pelo toque na notificação
     onAlertasAbertos: () -> Unit = {},
+    oferecerBiometria: Boolean = false,     // logo depois do login com senha (Fluxo C)
+    onOfertaBiometriaRespondida: () -> Unit = {},
 ) {
 
     val nav = rememberNavController()
@@ -130,6 +134,36 @@ fun MainScreen(
                     pedirPermissao = false
                 }) { Text("Agora não") }
             },
+        )
+    }
+
+    // Depois do aviso de notificações: oferece entrar com biometria nas próximas vezes (RF02).
+    if (oferecerBiometria && !pedirPermissao) {
+        fun responder() {
+            Biometria.marcarOferecida(context)
+            onOfertaBiometriaRespondida()
+        }
+        AlertDialog(
+            onDismissRequest = { responder() },
+            title = { Text("Entrar com biometria?") },
+            text = {
+                Text(
+                    "Da próxima vez, abra o app com a digital ou o rosto, sem digitar a senha. " +
+                        "Dá para mudar depois em Mais → Perfil e preferências."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    responder()
+                    Biometria.autenticar(
+                        context = context,
+                        titulo = "Ativar login por biometria",
+                        onSucesso = { Biometria.definirAtivada(context, true) },
+                        onUsarSenha = {},
+                    )
+                }) { Text("Ativar") }
+            },
+            dismissButton = { TextButton(onClick = { responder() }) { Text("Agora não") } },
         )
     }
 
@@ -240,8 +274,8 @@ fun MainScreen(
                         nav.navigate("usuarios")
                     },
 
-                    onTrocarSenha = {
-                        nav.navigate("trocar-senha")
+                    onPerfil = {
+                        nav.navigate("perfil")
                     },
 
                     onConfigAlertas = {
@@ -273,6 +307,22 @@ fun MainScreen(
                     onVoltar = {
                         nav.popBackStack()
                     }
+                )
+            }
+
+            // ---------- Perfil e preferências (T18) ----------
+
+            composable("perfil") {
+
+                PerfilScreen(
+                    usuario = usuario,
+                    onVoltar = {
+                        nav.popBackStack()
+                    },
+                    onTrocarSenha = {
+                        nav.navigate("trocar-senha")
+                    },
+                    onSair = onSair
                 )
             }
 
@@ -486,7 +536,7 @@ fun MaisScreen(
     onMedicamentos: () -> Unit,
     onUnidades: () -> Unit,
     onUsuarios: () -> Unit,
-    onTrocarSenha: () -> Unit,
+    onPerfil: () -> Unit,
     onConfigAlertas: () -> Unit,
     onGerarRelatorios: () -> Unit
 ) {
@@ -519,13 +569,13 @@ fun MaisScreen(
             Text("Histórico de movimentações")
         }
 
-        // Trocar senha
+        // Perfil e preferências: biometria, notificações, trocar senha (T18)
 
         OutlinedButton(
-            onClick = onTrocarSenha,
+            onClick = onPerfil,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Trocar senha")
+            Text("Perfil e preferências")
         }
 
         // Gerar relatórios PDF
