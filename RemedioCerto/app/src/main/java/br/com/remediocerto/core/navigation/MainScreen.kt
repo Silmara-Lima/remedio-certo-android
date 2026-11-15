@@ -1,5 +1,8 @@
 package br.com.remediocerto.core.navigation
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -9,8 +12,13 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -22,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
 import br.com.remediocerto.core.network.UsuarioDto
+import br.com.remediocerto.core.notificacao.Notificacoes
 
 import br.com.remediocerto.feature.RelatoriosScreen
 import br.com.remediocerto.feature.cadastros.medicamentos.MedicamentoFormScreen
@@ -57,7 +66,9 @@ enum class Aba(
 @Composable
 fun MainScreen(
     usuario: UsuarioDto,
-    onSair: () -> Unit
+    onSair: () -> Unit,
+    abrirAlertas: Boolean = false,          // true quando o app abriu pelo toque na notificação
+    onAlertasAbertos: () -> Unit = {},
 ) {
 
     val nav = rememberNavController()
@@ -73,6 +84,52 @@ fun MainScreen(
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    // ---------- Notificações ----------
+
+    val context = LocalContext.current
+
+    // Toque na notificação: vai direto para a aba Alertas (depois do login, se precisar).
+    LaunchedEffect(abrirAlertas) {
+        if (abrirAlertas) {
+            irParaAba(Aba.ALERTAS.rota)
+            onAlertasAbertos()
+        }
+    }
+
+    // Android 13+: explica antes de pedir a permissão de notificação, uma vez só (RNF15).
+    var pedirPermissao by remember { mutableStateOf(Notificacoes.precisaPedirPermissao(context)) }
+    val permissao = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedida ->
+        if (concedida) Notificacoes.verificarAgora(context)
+    }
+    if (pedirPermissao) {
+        AlertDialog(
+            onDismissRequest = {
+                Notificacoes.marcarQuePerguntou(context)
+                pedirPermissao = false
+            },
+            title = { Text("Ativar notificações?") },
+            text = {
+                Text(
+                    "O Remédio Certo avisa quando um medicamento fica com estoque baixo " +
+                        "ou perto de vencer, mesmo com o app fechado."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Notificacoes.marcarQuePerguntou(context)
+                    pedirPermissao = false
+                    permissao.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }) { Text("Ativar") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    Notificacoes.marcarQuePerguntou(context)
+                    pedirPermissao = false
+                }) { Text("Agora não") }
+            },
+        )
     }
 
     Scaffold(

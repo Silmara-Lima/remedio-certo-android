@@ -14,6 +14,7 @@ import br.com.remediocerto.core.database.DatabaseProvider
 import br.com.remediocerto.core.database.dao.MovimentacaoPendenteDao
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.LoteMovimentacoesRequest
+import br.com.remediocerto.core.notificacao.Notificacoes
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -91,8 +92,13 @@ class SincronizacaoWorker(context: Context, params: WorkerParameters) : Coroutin
         val dao = DatabaseProvider.getDatabase(applicationContext).movimentacaoPendenteDao()
         return when (Sincronizacao.enviarPendentes(dao, sessao.second.id)) {
             ResultadoEnvio.SEM_CONEXAO -> Result.retry()
+            ResultadoEnvio.CONCLUIDO -> {
+                // As movimentações enviadas podem ter gerado alertas: verifica e notifica.
+                Notificacoes.verificarAgora(applicationContext)
+                Result.success()
+            }
             // Sessão encerrada: a fila fica guardada e sai no próximo login.
-            ResultadoEnvio.CONCLUIDO, ResultadoEnvio.SESSAO_ENCERRADA -> Result.success()
+            ResultadoEnvio.SESSAO_ENCERRADA -> Result.success()
         }
     }
 }

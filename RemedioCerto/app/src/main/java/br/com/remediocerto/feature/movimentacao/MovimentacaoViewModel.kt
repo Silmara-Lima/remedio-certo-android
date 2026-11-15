@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import br.com.remediocerto.core.database.DatabaseProvider
 import br.com.remediocerto.core.database.entity.MovimentacaoPendenteEntity
 import br.com.remediocerto.core.network.*
+import br.com.remediocerto.core.notificacao.Notificacoes
 import br.com.remediocerto.core.offline.Sincronizacao
 import br.com.remediocerto.core.offline.medicamentosDoCache
 import br.com.remediocerto.core.offline.paraDto
@@ -203,6 +204,8 @@ class MovimentacaoViewModel(
                     mensagem = "$descricao registrada com sucesso."
                     limparCampos()
                     carregarLotes()
+                    // Se a movimentação gerou alerta (ex.: estoque abaixo do mínimo), notifica na hora.
+                    Notificacoes.verificarAgora(getApplication())
                 } else {
                     erro = resultado?.mensagem ?: "A API recusou a movimentação."
                 }
