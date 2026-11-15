@@ -27,7 +27,10 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
 
-class MedicamentoFormViewModel(private val id: Int?) : ViewModel() {
+class MedicamentoFormViewModel(
+    private val id: Int?,
+    codigoInicial: String? = null,      // vindo do scanner quando o código ainda não existe (RF09)
+) : ViewModel() {
     val edicao = id != null
 
     var nome by mutableStateOf("")
@@ -35,7 +38,7 @@ class MedicamentoFormViewModel(private val id: Int?) : ViewModel() {
     var fabricante by mutableStateOf("")
     var formaFarmaceutica by mutableStateOf("")
     var dosagem by mutableStateOf("")
-    var codigoBarras by mutableStateOf("")
+    var codigoBarras by mutableStateOf(codigoInicial.orEmpty())
     var registroAnvisa by mutableStateOf("")
     var quantidadeMinima by mutableStateOf("10")
     var ativo by mutableStateOf(true); private set
@@ -114,9 +117,9 @@ private fun String.vazioParaNulo(): String? = trim().ifBlank { null }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicamentoFormScreen(id: Int?, onConcluido: () -> Unit) {
+fun MedicamentoFormScreen(id: Int?, onConcluido: () -> Unit, codigoInicial: String? = null) {
     val vm: MedicamentoFormViewModel = viewModel(factory = viewModelFactory {
-        initializer { MedicamentoFormViewModel(id) }
+        initializer { MedicamentoFormViewModel(id, codigoInicial) }
     })
     val context = LocalContext.current
     var confirmarDesativar by remember { mutableStateOf(false) }
