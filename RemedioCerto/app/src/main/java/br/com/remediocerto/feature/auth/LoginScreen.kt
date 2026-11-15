@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +18,7 @@ import br.com.remediocerto.RemedioCertoApp
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.LoginRequest
 import br.com.remediocerto.core.network.UsuarioDto
+import br.com.remediocerto.core.ui.CampoSenha
 import br.com.remediocerto.core.notificacao.Notificacoes
 import br.com.remediocerto.core.offline.Sincronizacao
 import kotlinx.coroutines.launch
@@ -111,15 +111,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = senha,
-            onValueChange = { senha = it },
-            label = { Text("Senha") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        CampoSenha(valor = senha, onValorChange = { senha = it }, rotulo = "Senha")
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = { vm.entrar(email, senha) },

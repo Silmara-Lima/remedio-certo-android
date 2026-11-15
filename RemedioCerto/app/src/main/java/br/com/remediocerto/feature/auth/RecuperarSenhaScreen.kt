@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +18,7 @@ import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.RecuperarSenhaRequest
 import br.com.remediocerto.core.network.RedefinirSenhaRequest
 import br.com.remediocerto.core.network.mensagemDeErro
+import br.com.remediocerto.core.ui.CampoSenha
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -152,24 +152,8 @@ fun RecuperarSenhaScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = vm.novaSenha,
-                    onValueChange = { vm.novaSenha = it },
-                    label = { Text("Nova senha") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = vm.confirmacao,
-                    onValueChange = { vm.confirmacao = it },
-                    label = { Text("Confirme a nova senha") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                CampoSenha(valor = vm.novaSenha, onValorChange = { vm.novaSenha = it }, rotulo = "Nova senha")
+                CampoSenha(valor = vm.confirmacao, onValorChange = { vm.confirmacao = it }, rotulo = "Confirme a nova senha")
                 vm.erro?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Button(
                     onClick = vm::redefinir,

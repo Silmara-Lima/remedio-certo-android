@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
@@ -50,9 +52,6 @@ import br.com.remediocerto.feature.cadastros.usuarios.UsuarioFormScreen
 import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
 import br.com.remediocerto.feature.perfil.PerfilScreen
 import br.com.remediocerto.feature.perfil.TrocarSenhaScreen
-
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 
 // ---------- Abas principais ----------
 
@@ -575,7 +574,7 @@ fun MaisScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState())   // com todos os botões do admin, o Sair fica abaixo da tela
             .padding(24.dp),
 
         verticalArrangement = Arrangement.spacedBy(12.dp)
