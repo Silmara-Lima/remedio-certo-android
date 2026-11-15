@@ -86,6 +86,14 @@ class UsuarioResumo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ResponsavelOut(BaseModel):
+    """Só o necessário para mostrar quem tratou um alerta (dados pessoais mínimos)."""
+    id: int
+    nome: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UsuarioAuthOut(BaseModel):
     id: int
     nome: str
@@ -260,6 +268,7 @@ class AlertaOut(AlertaBase):
     id: int
     gerado_em: datetime
     resolvido_em: datetime | None = None
+    resolvido_por: ResponsavelOut | None = None
     medicamento: MedicamentoOut | None = None
     unidade: UnidadeOut | None = None
     estoque_lote: EstoqueOut | None = None

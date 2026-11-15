@@ -167,7 +167,13 @@ class Alerta(Base):
     estoque_lote_id: Mapped[int | None] = mapped_column(ForeignKey("estoques_lotes.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
     gerado_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     resolvido_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # RF14: quem resolveu ou ignorou. Fica vazio quando o sistema resolve sozinho.
+    resolvido_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+    )
 
     medicamento: Mapped[Medicamento] = relationship(back_populates="alertas")
     unidade: Mapped[UnidadeSaude] = relationship(back_populates="alertas")
     estoque_lote: Mapped[EstoqueLote | None] = relationship(back_populates="alertas")
+    resolvido_por: Mapped[Usuario | None] = relationship(foreign_keys=[resolvido_por_id])

@@ -185,10 +185,10 @@ private fun AlertaCard(
                         Text("Registrar movimentação")
                     }
                 } else {
-                    alerta.resolvidoEm?.let {
+                    textoResolucao(alerta)?.let {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "${if (alerta.status == AbaAlerta.RESOLVIDOS.api) "Resolvido" else "Ignorado"} em ${dataHoraBr(it)}",
+                            it,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -197,6 +197,14 @@ private fun AlertaCard(
             }
         }
     }
+}
+
+/** "Resolvido por Maria Silva em 15/11/2026 14:10" (RF14). Sem nome quando o sistema resolveu sozinho. */
+internal fun textoResolucao(alerta: AlertaDto): String? {
+    val quando = alerta.resolvidoEm ?: return null
+    val acao = if (alerta.status == AbaAlerta.RESOLVIDOS.api) "Resolvido" else "Ignorado"
+    val quem = alerta.resolvidoPor?.let { " por ${it.nome}" }.orEmpty()
+    return "$acao$quem em ${dataHoraBr(quando)}"
 }
 
 @Composable
