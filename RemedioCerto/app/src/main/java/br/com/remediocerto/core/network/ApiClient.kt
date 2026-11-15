@@ -48,6 +48,10 @@ interface RemedioCertoApi {
     @GET("movimentacoes") suspend fun listarMovimentacoes(
         @Query("tipo") tipo: String? = null,
         @Query("limite") limite: Int = 100,
+        @Query("dataInicio") dataInicio: String? = null,        // "2026-11-09"
+        @Query("dataFim") dataFim: String? = null,
+        @Query("medicamento_id") medicamentoId: Int? = null,
+        @Query("unidadeId") unidadeId: Int? = null,
     ): List<HistoricoDto>
 
     // ---------- Medicamentos ----------
