@@ -25,6 +25,8 @@ interface RemedioCertoApi {
     @POST("auth/login") suspend fun login(@Body body: LoginRequest): TokenResponse
     @GET("auth/me") suspend fun me(): UsuarioDto
     @PUT("auth/trocar-senha") suspend fun trocarSenha(@Body body: TrocarSenhaRequest): MensagemDto
+    @POST("auth/recuperar-senha") suspend fun recuperarSenha(@Body body: RecuperarSenhaRequest): MensagemDto
+    @POST("auth/redefinir-senha") suspend fun redefinirSenha(@Body body: RedefinirSenhaRequest): MensagemDto
 
     // ---------- Dashboard ----------
     @GET("dashboard") suspend fun dashboard(): DashboardDto

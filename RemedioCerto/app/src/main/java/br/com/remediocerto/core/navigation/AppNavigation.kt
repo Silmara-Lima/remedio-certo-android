@@ -14,6 +14,7 @@ import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.UsuarioDto
 import br.com.remediocerto.core.notificacao.Notificacoes
 import br.com.remediocerto.feature.auth.LoginScreen
+import br.com.remediocerto.feature.auth.RecuperarSenhaScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -27,6 +28,8 @@ fun AppNavigation(
     val scope = rememberCoroutineScope()
     var usuario by remember { mutableStateOf(usuarioInicial) }
     var avisoLogin by remember { mutableStateOf<String?>(null) }
+    var avisoInfo by remember { mutableStateOf<String?>(null) }
+    var emailRecuperacao by remember { mutableStateOf("") }
 
     // avisarServidor = true no botão Sair: encerra a sessão também na API.
     fun encerrarSessao(aviso: String?, avisarServidor: Boolean = false) {
@@ -56,10 +59,29 @@ fun AppNavigation(
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
                 LoginScreen(
                     aviso = avisoLogin,
+                    avisoInfo = avisoInfo,
                     onLoginOk = { u ->
                         usuario = u
                         avisoLogin = null
+                        avisoInfo = null
                         nav.navigate("principal") { popUpTo("login") { inclusive = true } }
+                    },
+                    onEsqueciSenha = { email ->
+                        emailRecuperacao = email
+                        nav.navigate("recuperar-senha")
+                    },
+                )
+            }
+        }
+        composable("recuperar-senha") {
+            Box(Modifier.fillMaxSize().systemBarsPadding()) {
+                RecuperarSenhaScreen(
+                    emailInicial = emailRecuperacao,
+                    onVoltar = { nav.popBackStack() },
+                    onConcluido = {
+                        avisoLogin = null
+                        avisoInfo = "Senha redefinida. Entre com a nova senha."
+                        nav.popBackStack()
                     },
                 )
             }

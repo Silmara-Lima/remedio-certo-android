@@ -72,7 +72,8 @@ def test_reset_revokes_session_created_by_login_already_in_progress(client, db_s
             assert_user_is_locked(db_session.get_bind(), user_id=1)
             reset_future = executor.submit(
                 client.post, "/auth/redefinir-senha",
-                json={"token": mailbox[0], "nova_senha": "recuperada-concorrente123"},
+                json={"email": "admin@remediocerto.com", "codigo": mailbox[0],
+                      "nova_senha": "recuperada-concorrente123"},
             )
             assert reset_attempting_lock.wait(timeout=20), "Reset did not start its database work"
         finally:

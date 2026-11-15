@@ -1,10 +1,12 @@
+import hashlib
+import hmac
 import logging
 import secrets
 import time
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlalchemy.orm import Session
 
 from app import email_service
@@ -26,6 +28,16 @@ DUMMY_HASH = gerar_hash_senha(secrets.token_urlsafe(32))
 
 def ip(request):
     return request.client.host if request.client else "unknown"
+
+
+def gerar_codigo() -> str:
+    """Código de recuperação de 6 números, fácil de ler no e-mail e digitar no celular."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def codigo_hash(usuario_id: int, codigo: str) -> str:
+    """O código nunca é guardado em texto: só um HMAC ligado ao usuário e à SECRET_KEY."""
+    return hmac.new(settings.SECRET_KEY.encode(), f"reset:{usuario_id}:{codigo}".encode(), hashlib.sha256).hexdigest()
 
 
 @router.post("/login", response_model=SessionToken)
@@ -101,9 +113,12 @@ def recuperar_senha(dados: RecuperarSenhaIn, request: Request, background_tasks:
         raise HTTPException(503, "Recuperacao por e-mail ainda nao configurada.")
     usuario = bloquear_usuario(db, email=dados.email)
     if usuario and usuario.ativo:
-        raw = secrets.token_urlsafe(48)
+        raw = gerar_codigo()
+        chave = codigo_hash(usuario.id, raw)
+        # Códigos anteriores deixam de valer; um registro antigo com o mesmo código sorteado é removido.
         db.execute(update(PasswordReset).where(PasswordReset.usuario_id == usuario.id).values(used=True))
-        db.add(PasswordReset(token_hash=token_hash(raw), usuario_id=usuario.id,
+        db.execute(delete(PasswordReset).where(PasswordReset.token_hash == chave))
+        db.add(PasswordReset(token_hash=chave, usuario_id=usuario.id,
                              expires_at=int(time.time()) + settings.PASSWORD_RESET_EXPIRE_MINUTES * 60))
         db.commit()
         background_tasks.add_task(_entregar_recuperacao, usuario.email, raw)
@@ -120,11 +135,13 @@ def _entregar_recuperacao(email, raw):
 @router.post("/redefinir-senha", response_model=MensagemOut)
 def redefinir_senha(dados: RedefinirSenhaIn, request: Request, db: Session = Depends(get_db)):
     limitar(db, f"reset-confirm:ip:{ip(request)}", 30)
-    reset = db.get(PasswordReset, token_hash(dados.token))
-    if not reset or reset.used or reset.expires_at <= int(time.time()):
-        raise HTTPException(400, "Codigo invalido ou expirado.")
-    usuario = bloquear_usuario(db, user_id=reset.usuario_id)
+    # Código curto: no máximo 5 tentativas por e-mail a cada 15 minutos (o código vale 15 minutos).
+    limitar(db, f"reset-confirm:email:{str(dados.email).lower()}", 5)
+    usuario = bloquear_usuario(db, email=dados.email)
     if not usuario or not usuario.ativo:
+        raise HTTPException(400, "Codigo invalido ou expirado.")
+    reset = db.get(PasswordReset, codigo_hash(usuario.id, dados.codigo))
+    if not reset or reset.used or reset.expires_at <= int(time.time()) or reset.usuario_id != usuario.id:
         raise HTTPException(400, "Codigo invalido ou expirado.")
     claimed = db.execute(update(PasswordReset).where(PasswordReset.token_hash == reset.token_hash, PasswordReset.used.is_(False), PasswordReset.expires_at > int(time.time()))
                          .values(used=True)).rowcount

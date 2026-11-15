@@ -17,5 +17,7 @@ class RecuperarSenhaIn(BaseModel):
 
 
 class RedefinirSenhaIn(BaseModel):
-    token: str = Field(min_length=32, max_length=256)
+    # Código de 6 números enviado por e-mail; o e-mail identifica de quem é o código.
+    email: EmailStr
+    codigo: str = Field(pattern=r"^\d{6}$")
     nova_senha: str = Field(min_length=6, max_length=120)

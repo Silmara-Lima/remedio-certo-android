@@ -8,6 +8,7 @@ from app.auth_models import AuthSession, PasswordReset, RefreshToken
 from app.auth_service import token_hash
 from app.config import Settings, settings
 from app.models import Usuario
+from app.routers.auth import codigo_hash
 
 
 def login(client):
@@ -18,6 +19,14 @@ def login(client):
 
 def headers(token):
     return {"Authorization": f"Bearer {token}"}
+
+
+def usuario_id(db_session, email):
+    return db_session.query(Usuario).filter_by(email=email).one().id
+
+
+def redefinir(client, email, codigo, nova_senha):
+    return client.post("/auth/redefinir-senha", json={"email": email, "codigo": codigo, "nova_senha": nova_senha})
 
 
 def test_refresh_rotation_replay_and_no_plaintext_in_database(client, db_session):
@@ -88,24 +97,28 @@ def test_password_recovery_single_use_revokes_sessions_and_hides_account(client,
     assert known.json() == unknown.json()
     assert len(mailbox) == 1
     code = mailbox[0][1]
+    assert len(code) == 6 and code.isdigit()
     assert code not in known.text
-    assert db_session.get(PasswordReset, token_hash(code)) is not None
-    response = client.post("/auth/redefinir-senha", json={"token": code, "nova_senha": "recuperada123"})
+    # O código fica no banco só como HMAC ligado ao usuário, nunca em texto.
+    assert db_session.get(PasswordReset, codigo_hash(usuario_id(db_session, "admin@remediocerto.com"), code)) is not None
+    assert db_session.get(PasswordReset, code) is None
+    response = redefinir(client, "admin@remediocerto.com", code, "recuperada123")
     assert response.status_code == 200
     assert client.get("/auth/me", headers=headers(session["access_token"])).status_code == 401
     assert client.post("/auth/refresh", json={"refresh_token": session["refresh_token"]}).status_code == 401
-    assert client.post("/auth/redefinir-senha", json={"token": code, "nova_senha": "outra123"}).status_code == 400
+    assert redefinir(client, "admin@remediocerto.com", code, "outra123").status_code == 400
     assert client.post("/auth/login", json={"email": "admin@remediocerto.com", "senha": "recuperada123"}).status_code == 200
 
 
 def test_reset_expiry_superseding_code_and_rate_limit(client, db_session, mailbox):
     for _ in range(2):
         assert client.post("/auth/recuperar-senha", json={"email": "admin@remediocerto.com"}).status_code == 200
-    assert client.post("/auth/redefinir-senha", json={"token": mailbox[0][1], "nova_senha": "nova123"}).status_code == 400
-    reset = db_session.get(PasswordReset, token_hash(mailbox[1][1]))
+    if mailbox[0][1] != mailbox[1][1]:  # 1 chance em 1 milhão de o sorteio repetir o código
+        assert redefinir(client, "admin@remediocerto.com", mailbox[0][1], "nova123").status_code == 400
+    reset = db_session.get(PasswordReset, codigo_hash(usuario_id(db_session, "admin@remediocerto.com"), mailbox[1][1]))
     reset.expires_at = int(time.time()) - 1
     db_session.commit()
-    assert client.post("/auth/redefinir-senha", json={"token": mailbox[1][1], "nova_senha": "nova123"}).status_code == 400
+    assert redefinir(client, "admin@remediocerto.com", mailbox[1][1], "nova123").status_code == 400
     assert client.post("/auth/recuperar-senha", json={"email": "admin@remediocerto.com"}).status_code == 200
     assert client.post("/auth/recuperar-senha", json={"email": "admin@remediocerto.com"}).status_code == 429
 
@@ -167,4 +180,4 @@ def test_admin_password_change_revokes_existing_session_and_reset(client, admin_
     result = client.put(f"/usuarios/{employee['usuario']['id']}", headers=admin_headers, json={"senha": "nova-admin123"})
     assert result.status_code == 200
     assert client.get("/auth/me", headers=headers(employee["access_token"])).status_code == 401
-    assert client.post("/auth/redefinir-senha", json={"token": mailbox[0][1], "nova_senha": "outra123"}).status_code == 400
+    assert redefinir(client, "maria@remediocerto.com", mailbox[0][1], "outra123").status_code == 400

@@ -54,7 +54,13 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, aviso: String? = null, vm: LoginViewModel = viewModel()) {
+fun LoginScreen(
+    onLoginOk: (UsuarioDto) -> Unit,
+    aviso: String? = null,                       // problema (ex.: sessão expirada), em vermelho
+    avisoInfo: String? = null,                   // informação (ex.: senha redefinida), em destaque neutro
+    onEsqueciSenha: (email: String) -> Unit = {},
+    vm: LoginViewModel = viewModel(),
+) {
     var email by remember { mutableStateOf("admin@remediocerto.com") }
     var senha by remember { mutableStateOf("") }
 
@@ -83,6 +89,15 @@ fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, aviso: String? = null, vm: Logi
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(aviso, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        }
+        if (avisoInfo != null) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(avisoInfo, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
 
@@ -116,6 +131,11 @@ fun LoginScreen(onLoginOk: (UsuarioDto) -> Unit, aviso: String? = null, vm: Logi
         vm.erro?.let {
             Spacer(Modifier.height(16.dp))
             Text(it, color = MaterialTheme.colorScheme.error)
+        }
+        Spacer(Modifier.height(8.dp))
+        // RF03 / T04: recuperação de senha por código enviado ao e-mail.
+        TextButton(onClick = { onEsqueciSenha(email.trim()) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Esqueci minha senha")
         }
     }
 }

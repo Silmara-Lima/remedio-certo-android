@@ -8,6 +8,17 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class LoginRequest(val email: String, val senha: String)
 
+// Recuperação de senha (RF03): código de 6 números enviado por e-mail.
+@Serializable
+data class RecuperarSenhaRequest(val email: String)
+
+@Serializable
+data class RedefinirSenhaRequest(
+    val email: String,
+    val codigo: String,
+    @SerialName("nova_senha") val novaSenha: String,
+)
+
 @Serializable
 data class TrocarSenhaRequest(
     @SerialName("senha_atual") val senhaAtual: String,
