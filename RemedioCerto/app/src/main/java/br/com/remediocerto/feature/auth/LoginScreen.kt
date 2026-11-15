@@ -19,6 +19,7 @@ import br.com.remediocerto.RemedioCertoApp
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.LoginRequest
 import br.com.remediocerto.core.network.UsuarioDto
+import br.com.remediocerto.core.notificacao.Notificacoes
 import br.com.remediocerto.core.offline.Sincronizacao
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -36,6 +37,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             ApiClient.token = r.accessToken
             getApplication<RemedioCertoApp>().sessao.salvar(r.accessToken, r.usuario, r.refreshToken)
             Sincronizacao.agendar(getApplication())   // envia movimentações offline que ficaram de antes
+            Notificacoes.verificarAgora(getApplication())   // avisa os alertas ativos da unidade
             usuarioLogado = r.usuario
         } catch (e: HttpException) {
             erro = when (e.code()) {

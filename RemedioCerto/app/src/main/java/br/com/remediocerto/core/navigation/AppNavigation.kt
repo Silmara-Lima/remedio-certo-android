@@ -12,11 +12,16 @@ import androidx.navigation.compose.rememberNavController
 import br.com.remediocerto.RemedioCertoApp
 import br.com.remediocerto.core.network.ApiClient
 import br.com.remediocerto.core.network.UsuarioDto
+import br.com.remediocerto.core.notificacao.Notificacoes
 import br.com.remediocerto.feature.auth.LoginScreen
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(usuarioInicial: UsuarioDto?) {
+fun AppNavigation(
+    usuarioInicial: UsuarioDto?,
+    destino: String? = null,            // "alertas" quando o app abre pela notificação
+    onDestinoAberto: () -> Unit = {},
+) {
     val nav = rememberNavController()
     val app = LocalContext.current.applicationContext as RemedioCertoApp
     val scope = rememberCoroutineScope()
@@ -27,6 +32,7 @@ fun AppNavigation(usuarioInicial: UsuarioDto?) {
     fun encerrarSessao(aviso: String?, avisarServidor: Boolean = false) {
         val tokenAntigo = ApiClient.token
         ApiClient.token = null
+        Notificacoes.limpar(app)
         scope.launch {
             app.sessao.limpar()
             if (avisarServidor && tokenAntigo != null) ApiClient.encerrarNoServidor(tokenAntigo)
@@ -59,7 +65,14 @@ fun AppNavigation(usuarioInicial: UsuarioDto?) {
             }
         }
         composable("principal") {
-            usuario?.let { u -> MainScreen(usuario = u, onSair = { encerrarSessao(null, avisarServidor = true) }) }
+            usuario?.let { u ->
+                MainScreen(
+                    usuario = u,
+                    onSair = { encerrarSessao(null, avisarServidor = true) },
+                    abrirAlertas = destino == Notificacoes.ABRIR_ALERTAS,
+                    onAlertasAbertos = onDestinoAberto,
+                )
+            }
         }
     }
 }
