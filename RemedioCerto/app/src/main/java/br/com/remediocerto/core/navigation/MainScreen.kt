@@ -51,6 +51,9 @@ import br.com.remediocerto.feature.cadastros.usuarios.UsuariosScreen
 import br.com.remediocerto.feature.perfil.PerfilScreen
 import br.com.remediocerto.feature.perfil.TrocarSenhaScreen
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 // ---------- Abas principais ----------
 
 enum class Aba(
@@ -572,6 +575,7 @@ fun MaisScreen(
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
 
         verticalArrangement = Arrangement.spacedBy(12.dp)
