@@ -15,7 +15,8 @@ object PdfExporter {
     fun exportarParaPDF(
         context: Context,
         titulo: String,
-        linhas: List<String>
+        linhas: List<String>,
+        nomeArquivo: String = "relatorio_movimentacoes",
     ): File? {
 
         val pdfDocument = PdfDocument()
@@ -38,7 +39,7 @@ object PdfExporter {
             // ---------- Preparação dos dados ----------
 
             val linhasRelatorio = if (linhas.isEmpty()) {
-                listOf("Nenhuma movimentação encontrada.")
+                listOf("Nenhum registro encontrado.")
             } else {
                 linhas
             }
@@ -102,16 +103,15 @@ object PdfExporter {
                     paint
                 )
 
-                // Título
                 paint.color = Color.BLACK
-                paint.textSize = 15f
+                paint.textSize = 13f
 
-                canvas.drawText(
-                    titulo,
-                    margem,
-                    85f,
-                    paint
-                )
+                // Título (quebrado em até 2 linhas, para não sair da página)
+                val tituloQuebra = paint.breakText(titulo, true, larguraTexto, null)
+                canvas.drawText(titulo.substring(0, tituloQuebra), margem, 75f, paint)
+                if (tituloQuebra < titulo.length) {
+                    canvas.drawText(titulo.substring(tituloQuebra).trimStart(), margem, 93f, paint)
+                }
 
                 // Linha divisória
                 paint.color = Color.GRAY
@@ -119,9 +119,9 @@ object PdfExporter {
 
                 canvas.drawLine(
                     margem,
-                    100f,
+                    105f,
                     largura - margem,
-                    100f,
+                    105f,
                     paint
                 )
 
@@ -178,7 +178,7 @@ object PdfExporter {
 
             val arquivo = File(
                 pasta,
-                "relatorio_movimentacoes.pdf"
+                "$nomeArquivo.pdf"
             )
 
             FileOutputStream(arquivo).use { output ->
