@@ -43,7 +43,7 @@ class UnidadeFormViewModel(private val id: Int?) : ViewModel() {
             try {
                 val u = ApiClient.api.buscarUnidade(id)
                 nome = u.nome
-                cnpj = u.cnpj.orEmpty()
+                cnpj = u.cnpj.orEmpty().filter(Char::isDigit)
                 endereco = u.endereco.orEmpty()
                 telefone = u.telefone.orEmpty()
                 ativa = u.ativa
@@ -131,7 +131,17 @@ fun UnidadeFormScreen(id: Int?, onConcluido: () -> Unit) {
                 }
             }
             Campo("Nome *", vm.nome) { vm.nome = it }
-            Campo("CNPJ (somente números)", vm.cnpj, KeyboardType.Number) { vm.cnpj = it }
+            // Só números, no máximo 14; o contador mostra quantos faltam
+            OutlinedTextField(
+                value = vm.cnpj,
+                onValueChange = { vm.cnpj = it.filter(Char::isDigit).take(14) },
+                label = { Text("CNPJ (somente números)") },
+                singleLine = true,
+                isError = vm.cnpj.isNotEmpty() && vm.cnpj.length != 14,
+                supportingText = { if (vm.cnpj.isNotEmpty()) Text("${vm.cnpj.length}/14 dígitos") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
             Campo("Endereço", vm.endereco) { vm.endereco = it }
             Campo("Telefone", vm.telefone, KeyboardType.Phone) { vm.telefone = it }
 
